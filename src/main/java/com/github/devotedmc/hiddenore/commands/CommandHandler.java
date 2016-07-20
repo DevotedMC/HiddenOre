@@ -27,7 +27,6 @@ public class CommandHandler implements CommandExecutor {
 					}
 				} else if (args.length >= 1) {
 					if ("save".equals(args[0])) {
-						plugin.getTracking().liveSave();
 						sender.sendMessage("HiddenOre tracking forced live save scheduled");
 						return true;
 					}

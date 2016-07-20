@@ -114,20 +114,9 @@ public class BlockBreakListener implements Listener {
 		// Check if suppression is on (preventing all drops). Fires off a HiddenOreGenerateEvent in case
 		// someone listening might object to our manipulation here.
 		if (bc != null && bc.suppressDrops) {
-			debug("Attempting to suppress break of tracked type {0}", blockName);
-			HiddenOreGenerateEvent hoges = new HiddenOreGenerateEvent(p, b, Material.AIR);
-			Bukkit.getPluginManager().callEvent(hoges);
-			if (!hoges.isCancelled()) {
-				b.setType(Material.AIR);
-				event.setCancelled(true);				
-			}
+			b.setType(Material.AIR);
+			event.setCancelled(true);				
 			bc = null;
-		}
-
-		// Check with out tracker to see if any more drops are available in this little slice of the world.
-		if (!plugin.getTracking().trackBreak(event.getBlock().getLocation())) {
-			debug("Drop skipped at {0} - layer break max met", event.getBlock().getLocation());
-			return;
 		}
 
 		// We have no block config.
@@ -135,8 +124,6 @@ public class BlockBreakListener implements Listener {
 
 		// There is no player responsible.
 		if (p == null) return;
-
-		debug("Break of tracked type {0} by {1}", blockName, p.getDisplayName());
 
 		ItemStack inMainHand = p.getInventory().getItemInMainHand();
 		
@@ -148,8 +135,6 @@ public class BlockBreakListener implements Listener {
 
 		boolean hasDrop = false;
 
-		StringBuffer alertUser = new StringBuffer().append(Config.instance.defaultPrefix);
-
 		String biomeName = b.getBiome().name();
 
 		if (bc.dropMultiple) {
@@ -157,13 +142,11 @@ public class BlockBreakListener implements Listener {
 				DropConfig dc = bc.getDropConfig(drop);
 
 				if (!dc.dropsWithTool(biomeName, inMainHand)) {
- 					debug("Cannot drop {0} - wrong tool", drop);
 					continue;
 				}
 
 				if (b.getLocation().getBlockY() > dc.getMaxY(biomeName)
 						|| b.getLocation().getBlockY() < dc.getMinY(biomeName)) {
-					debug("Cannot drop {0} - wrong Y", drop);
 					continue;
 				}
 				
@@ -175,7 +158,7 @@ public class BlockBreakListener implements Listener {
 				// Random check to decide whether or not the special drop should be dropped
 				if (dropChance > Math.random()) {
 					hasDrop = doDrops(hasDrop, b, event, p, biomeName, dropModifier, 
-							drop, dc, blockName, bc, sb, alertUser);
+							drop, dc, blockName, bc, sb, null);
 					if (!hasDrop) {
 						// Core of event cancelled!
 						return;
@@ -191,19 +174,12 @@ public class BlockBreakListener implements Listener {
 				ToolConfig tc = dc.dropsWithToolConfig(biomeName, inMainHand);
 				
 				hasDrop = doDrops(hasDrop, b, event, p, biomeName, tc, 
-						drop, dc, blockName, bc, sb, alertUser);
+						drop, dc, blockName, bc, sb, null);
 				if (!hasDrop) {
 					// Core of event cancelled!
 					return;
 				}
 			}
-		}
-		if (Config.isAlertUser() && hasDrop) {
-			if (Config.isListDrops()) {
-				alertUser.deleteCharAt(alertUser.length() - 1);
-			}
-
-			event.getPlayer().sendMessage(ChatColor.GOLD + alertUser.toString());
 		}
 	}
 
@@ -228,63 +204,22 @@ public class BlockBreakListener implements Listener {
 			String dropName, DropConfig dropConfig, String blockName, BlockConfig blockConfig, byte blockSubType, StringBuffer alertBuffer) {
 		// Remove block, drop special drop and cancel the event
 		if (!clearBlock) {
-			HiddenOreGenerateEvent hoge = new HiddenOreGenerateEvent(player, sourceBlock, Material.AIR);
-			Bukkit.getPluginManager().callEvent(hoge);
-			if (!hoge.isCancelled()) {
-				sourceBlock.setType(Material.AIR);
-				event.setCancelled(true);				
-			} else {
-				log("For {0} at {1}, HiddenOre for {2} cancelled.", player.getDisplayName(), player.getLocation(), sourceBlock);
-				debug("Generate cancelled, cancelling HiddenOre drop.");
-				return false;
-			}
+			sourceBlock.setType(Material.AIR);
+			event.setCancelled(true);				
 		}
 		
 		final List<ItemStack> items = dropConfig.renderDrop(biomeName, dropTool);
 		final Location sourceLocation = sourceBlock.getLocation();
 		if (items.size() > 0) {
-			final HiddenOreEvent hoe = new HiddenOreEvent(player, sourceLocation, items);
-			Bukkit.getPluginManager().callEvent(hoe);
-			if (!hoe.isCancelled()) {
-				// Schedule drop.
-				new BukkitRunnable() {
-					@Override
-					public void run() {
-						for (ItemStack item: hoe.getDrops()) {
-							sourceLocation.getWorld().dropItem(sourceLocation.add(0.5, 0.5, 0.5), item).setVelocity(new Vector(0, 0.05, 0));
-						}
-					}
-				}.runTaskLater(plugin, 1l);
-
-				// Correct stats output.
-				for (ItemStack item: hoe.getDrops()) {
-					log("STAT: Player {0} at {1} broke {2}:{3} - dropping {4} {5}:{6}", 
-							player.getDisplayName(), player.getLocation(), blockName, blockSubType, 
-							item.getAmount(), item.getType().name(), item.getDurability());
-				}
-				
-				if (Config.isAlertUser()) {
-					if (blockConfig.hasCustomPrefix(dropName)) {
-						StringBuffer customAlerts = new StringBuffer(blockConfig.getPrefix(dropName));
-	
-						for (ItemStack item : hoe.getDrops()) {
-							customAlerts.append(" ").append(item.getAmount()).append(" ")
-								.append(Config.getPrettyName(item.getType().name(), item.getDurability()));
-						}
-						event.getPlayer().sendMessage(ChatColor.GOLD + customAlerts.toString());
-					} else {
-						if (Config.isListDrops()) {
-							for (ItemStack item : hoe.getDrops()) {
-								alertBuffer.append(" ").append(item.getAmount()).append(" ").append(
-										Config.getPrettyName(item.getType().name(), item.getDurability())
-									).append(",");
-							}
-						}
+			// Schedule drop.
+			new BukkitRunnable() {
+				@Override
+				public void run() {
+					for (ItemStack item: items) {
+						sourceLocation.getWorld().dropItem(sourceLocation.add(0.5, 0.5, 0.5), item).setVelocity(new Vector(0, 0.05, 0));
 					}
 				}
-			} else {
-				log("For {0} at {1}, HiddenOre {2} cancelled.", player.getDisplayName(), player.getLocation(), dropName);
-			}
+			}.runTaskLater(plugin, 1l);
 		}
 		
 		if (dropConfig.transformIfAble) {
@@ -313,54 +248,15 @@ public class BlockBreakListener implements Listener {
 							(int) Math.round(u * zsq * Math.sin(theta)),
 							(int) Math.round(u * z));
 					if (blockConfig.checkBlock(walk)) {
-						HiddenOreGenerateEvent hoge = new HiddenOreGenerateEvent(player, walk, sample);
-						Bukkit.getPluginManager().callEvent(hoge);
-						if (!hoge.isCancelled()) {
-							walk.setType(hoge.getTransform());
-							expressed = hoge.getTransform();
-							cPlace --;
-						}
+						walk.setType(expressed);
+						cPlace --;
 					}
 					maxWalk --;
 					cAttempt ++;
-				}
-
-				log("STAT: Player {0} at {1} broke {2}:{3} - replacing with {4} {5}:{6} as {7}", 
-						player.getDisplayName(), player.getLocation(), blockName, blockSubType, 
-						xform.getAmount()- cPlace, xform.getType().name(), xform.getDurability(),
-						expressed);
-
-				
-				// Anything to tell anyone about?
-				if (cPlace < xform.getAmount() && Config.isAlertUser()) {
-					if (blockConfig.hasCustomPrefix(dropName)) {
-						StringBuffer customAlerts = new StringBuffer(blockConfig.getPrefix(dropName));
-
-						customAlerts.append(" ").append(xform.getAmount() - cPlace).append(" ").append(
-									Config.getPrettyName(xform.getType().name(), xform.getDurability())
-								).append(" nearby"); // TODO: Replace with configured suffix
-						player.sendMessage(ChatColor.GOLD + customAlerts.toString());
-					} else {
-						if (Config.isListDrops()) {
-							alertBuffer.append(" ").append(xform.getAmount() - cPlace).append(" ").append(
-										Config.getPrettyName(xform.getType().name(), xform.getDurability())
-									).append(" nearby,"); // TODO: Replace with configured suffix
-						}
-					}
 				}
 			}
 		}
 		
 		return true;
-	}
-	
-	private void log(String message, Object...replace) {
-		plugin.getLogger().log(Level.INFO, message, replace);
-	}
-
-	private void debug(String message, Object...replace) {
-		if (Config.isDebug) {
-			plugin.getLogger().log(Level.INFO, message, replace);
-		}
 	}
 }

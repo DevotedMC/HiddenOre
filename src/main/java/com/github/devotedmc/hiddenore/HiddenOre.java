@@ -6,8 +6,6 @@ import org.bukkit.scheduler.BukkitTask;
 
 import com.github.devotedmc.hiddenore.commands.CommandHandler;
 import com.github.devotedmc.hiddenore.listeners.BlockBreakListener;
-import com.github.devotedmc.hiddenore.listeners.ExploitListener;
-import com.github.devotedmc.hiddenore.tracking.BreakTracking;
 
 public class HiddenOre extends JavaPlugin {
 
@@ -15,11 +13,7 @@ public class HiddenOre extends JavaPlugin {
 
 	private static CommandHandler commandHandler;
 
-	private static BreakTracking tracking;
-	private BukkitTask trackingSave;
-	
 	private static BlockBreakListener breakHandler;
-	private static ExploitListener exploitHandler;
 
 	@Override
 	public void onEnable() {
@@ -29,17 +23,6 @@ public class HiddenOre extends JavaPlugin {
 		reloadConfig();
 		Config.loadConfig();
 		
-		tracking = new BreakTracking();
-		tracking.load();
-		trackingSave = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
-			public void run() {
-				tracking.save();
-			}
-		}, Config.trackSave, Config.trackSave);
-		
-		exploitHandler = new ExploitListener(plugin);
-		this.getServer().getPluginManager().registerEvents(exploitHandler, this);
-
 		breakHandler = new BlockBreakListener(plugin);
 		this.getServer().getPluginManager().registerEvents(breakHandler, this);
 				
@@ -49,18 +32,12 @@ public class HiddenOre extends JavaPlugin {
 
 	@Override
 	public void onDisable() {
-		tracking.save();
-		trackingSave.cancel();
 	}
 
 	public static HiddenOre getPlugin() {
 		return plugin;
 	}
 
-	public BreakTracking getTracking() {
-		return tracking;
-	}
-	
 	public BlockBreakListener getBreakListener() {
 		return breakHandler;
 	}
