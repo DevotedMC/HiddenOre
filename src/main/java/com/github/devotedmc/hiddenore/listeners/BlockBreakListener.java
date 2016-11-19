@@ -1,9 +1,14 @@
 package com.github.devotedmc.hiddenore.listeners;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.logging.Level;
+
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.ChatColor;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.enchantments.Enchantment;
@@ -19,16 +24,12 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.logging.Level;
-
 import com.github.devotedmc.hiddenore.BlockConfig;
+import com.github.devotedmc.hiddenore.Config;
 import com.github.devotedmc.hiddenore.DropConfig;
 import com.github.devotedmc.hiddenore.HiddenOre;
-import com.github.devotedmc.hiddenore.Config;
 import com.github.devotedmc.hiddenore.ToolConfig;
+import com.github.devotedmc.hiddenore.VeinConfig;
 import com.github.devotedmc.hiddenore.events.HiddenOreEvent;
 import com.github.devotedmc.hiddenore.events.HiddenOreGenerateEvent;
 import com.github.devotedmc.hiddenore.util.FakePlayer;
@@ -67,54 +68,63 @@ public class BlockBreakListener implements Listener {
 	@SuppressWarnings("deprecation")
 	private void doBlockBreak(BlockBreakEvent event) {
 		Block b = event.getBlock();
+		Player p = event.getPlayer();
+		// There is no player responsible.
+		if (p == null) return;
+		
+		for(VeinConfig vein : Config.getVeinConfigs()) {
+			BlockConfig bc = vein.getBlockConfig();
+			if(Material.valueOf(bc.getMaterial()) == b.getType() && bc.checkSubType(b.getData())) {
+				double chance = vein.getOreChance(b.getLocation());
+				if(attemptHiddenOre(p, b, bc, event, chance)) {
+					return;
+				}
+			}
+		}
+
 		String blockName = b.getType().name();
 		Byte sb = b.getData();
-
 		BlockConfig bc = Config.isDropBlock(blockName, sb);
-
-		Player p = event.getPlayer();
-		
-		// Check if suppression is on (preventing all drops). Fires off a HiddenOreGenerateEvent in case
-		// someone listening might object to our manipulation here.
-		if (bc != null && bc.suppressDrops) {
-			debug("Attempting to suppress break of tracked type {0}", blockName);
+		attemptHiddenOre(p, b, bc, event, 1);
+	}
+	
+	@SuppressWarnings("deprecation")
+	private boolean attemptHiddenOre(Player p, Block b, BlockConfig bc, BlockBreakEvent event, double dropChance) {
+		if(bc != null && bc.suppressDrops) {
+			debug("Attempting to suppress break of tracked type {0}", bc.getMaterial());
 			HiddenOreGenerateEvent hoges = new HiddenOreGenerateEvent(p, b, Material.AIR);
 			Bukkit.getPluginManager().callEvent(hoges);
-			if (!hoges.isCancelled()) {
+			if(!hoges.isCancelled()) {
 				b.setType(Material.AIR);
-				event.setCancelled(true);				
+				event.setCancelled(true);
 			}
 			bc = null;
 		}
-
+		
+		if(bc == null) return false;
+		
 		// Check with out tracker to see if any more drops are available in this little slice of the world.
 		if (!plugin.getTracking().trackBreak(event.getBlock().getLocation())) {
 			debug("Drop skipped at {0} - layer break max met", event.getBlock().getLocation());
-			return;
+			return false;
 		}
-
-		// We have no block config.
-		if (bc == null) return;
-
-		// There is no player responsible.
-		if (p == null) return;
-
-		debug("Break of tracked type {0} by {1}", blockName, p.getDisplayName());
-
+		
+		debug("Break of tracked type {0} by {1}", bc.getMaterial(), p.getDisplayName());
+		
 		ItemStack inMainHand = p.getInventory().getItemInMainHand();
 		
 		// Check SilkTouch failfast, if configured.
 		if (!Config.instance.ignoreSilktouch && inMainHand != null && inMainHand.hasItemMeta() && 
-				inMainHand.getEnchantments() != null && inMainHand.getEnchantments().containsKey(Enchantment.SILK_TOUCH)) {
-			return;
+			inMainHand.getEnchantments() != null && inMainHand.getEnchantments().containsKey(Enchantment.SILK_TOUCH)) {
+			return false;
 		}
-
+		
 		boolean hasDrop = false;
-
+		
 		StringBuffer alertUser = new StringBuffer().append(Config.instance.defaultPrefix);
-
+		
 		String biomeName = b.getBiome().name();
-
+		
 		if (bc.dropMultiple) {
 			for (String drop : bc.getDrops()) {
 				DropConfig dc = bc.getDropConfig(drop);
@@ -132,16 +142,16 @@ public class BlockBreakListener implements Listener {
 				
 				ToolConfig dropModifier = dc.dropsWithToolConfig(biomeName, inMainHand);
 
-				double dropChance = dc.getChance(biomeName) 
+				dropChance *= dc.getChance(biomeName) 
 						* (dropModifier == null ? 1.0 : dropModifier.getDropChanceModifier());
 
 				// Random check to decide whether or not the special drop should be dropped
 				if (dropChance > Math.random()) {
 					hasDrop = doDrops(hasDrop, b, event, p, biomeName, dropModifier, 
-							drop, dc, blockName, bc, sb, alertUser);
+							drop, dc, bc.getMaterial(), bc, b.getData(), alertUser);
 					if (!hasDrop) {
 						// Core of event cancelled!
-						return;
+						return false;
 					} else {
 						doXP(dc, biomeName, dropModifier, b.getLocation());
 					}
@@ -156,10 +166,10 @@ public class BlockBreakListener implements Listener {
 				ToolConfig tc = dc.dropsWithToolConfig(biomeName, inMainHand);
 				
 				hasDrop = doDrops(hasDrop, b, event, p, biomeName, tc, 
-						drop, dc, blockName, bc, sb, alertUser);
+						drop, dc, bc.getMaterial(), bc, b.getData(), alertUser);
 				if (!hasDrop) {
 					// Core of event cancelled!
-					return;
+					return false;
 				} else {
 					doXP(dc, biomeName, tc, b.getLocation());
 				}
@@ -172,6 +182,7 @@ public class BlockBreakListener implements Listener {
 
 			event.getPlayer().sendMessage(ChatColor.GOLD + alertUser.toString());
 		}
+		return true;
 	}
 
 	private void doXP(DropConfig dc, String biomeName, ToolConfig dropModifier, Location loc) {
