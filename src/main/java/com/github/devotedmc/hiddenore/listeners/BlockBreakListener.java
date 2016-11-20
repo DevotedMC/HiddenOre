@@ -73,7 +73,7 @@ public class BlockBreakListener implements Listener {
 		if (p == null) return;
 		
 		for(VeinConfig vein : Config.getVeinConfigs()) {
-			BlockConfig bc = vein.getBlockConfig();
+			BlockConfig bc = Config.getBlockConfig(vein.getBlockConfig());
 			if(Material.valueOf(bc.getMaterial()) == b.getType() && bc.checkSubType(b.getData())) {
 				double chance = vein.getOreChance(b.getLocation());
 				if(attemptHiddenOre(p, b, bc, event, chance)) {

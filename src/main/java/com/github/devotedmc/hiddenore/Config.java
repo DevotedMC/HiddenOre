@@ -22,6 +22,7 @@ public final class Config {
 	public boolean listDrops;
 	public boolean ignoreSilktouch;
 	public Map<String, List<BlockConfig>> blockConfigs;
+	public Map<String, BlockConfig> blockConfigsByName;
 	public List<VeinConfig> veins;
 	public Map<String, NameConfig> prettyNames;
 
@@ -35,6 +36,8 @@ public final class Config {
 
 	private Config() {
 		blockConfigs = new HashMap<String, List<BlockConfig>>();
+		blockConfigsByName = new HashMap<String, BlockConfig>();
+		veins = new LinkedList<VeinConfig>();
 		prettyNames = new HashMap<String, NameConfig>();
 		trackFileName = "tracking.dat";
 		trackSave = 90000l;
@@ -123,16 +126,65 @@ public final class Config {
 				HiddenOre.getPlugin().getLogger().info("Loading config for " + sourceBlock);
 				ConfigurationSection block = blocks.getConfigurationSection(sourceBlock);
 
-				BlockConfig bc = loadBlockConfig(block);
-				if(bc == null) continue;
-				String cBlockName = bc.getMaterial();
+				String cBlockName = block.getString("material");
+				if (cBlockName == null) {
+					HiddenOre.getPlugin().getLogger().warning("Failed to find material for " + sourceBlock);
+					continue;
+				}
+				String cPrefix = block.getString("prefix", null);
+				Boolean cMultiple = block.getBoolean("dropMultiple", false);
+				Boolean cSuppress = block.getBoolean("suppressDrops", false);
+				List<Byte> subtypes = (block.getBoolean("allTypes", true)) ? null : block.getByteList("types");
 				
+				// add what blocks should be transformed, if transformation is used.
+				ConfigurationSection validTransforms = block.getConfigurationSection("validTransforms");
+				List<BlockConfig.MaterialWrapper> transformThese = new ArrayList<BlockConfig.MaterialWrapper>();
+				if (validTransforms != null) {
+					for (String transformL : validTransforms.getKeys(false)) {
+						ConfigurationSection transform = validTransforms.getConfigurationSection(transformL);
+						String tBlockName = transform.getString("material");
+						List<Byte> tSubtypes = (transform.getBoolean("allTypes", true)) ? null : transform.getByteList("types");
+						transformThese.add(new BlockConfig.MaterialWrapper(tBlockName, tSubtypes));
+					}
+				} else {
+					validTransforms = null;
+				}
+				BlockConfig bc = new BlockConfig(cBlockName, subtypes, cMultiple, cSuppress, cPrefix, transformThese);
+
+				// now add drops.
+				ConfigurationSection drops = block.getConfigurationSection("drops");
+				for (String sourceDrop : drops.getKeys(false)) {
+					HiddenOre.getPlugin().getLogger().info("Loading config for drop " + sourceDrop);
+					ConfigurationSection drop = drops.getConfigurationSection(sourceDrop);
+					String dPrefix = drop.getString("prefix", null);
+					@SuppressWarnings("unchecked")
+					List<ItemStack> items = (List<ItemStack>) drop.getList("package");
+					boolean transformIfAble = drop.getBoolean("transformIfAble", false);
+					boolean transformDropIfFails = drop.getBoolean("transformDropIfFails", false);
+					int transformMaxDropsIfFails = drop.getInt("transformMaxDropsIfFails", 1);
+
+					DropConfig dc = new DropConfig(sourceDrop, DropItemConfig.transform(items), 
+							transformIfAble, transformDropIfFails, transformMaxDropsIfFails,
+							dPrefix, grabLimits(drop, new DropLimitsConfig()));
+
+					ConfigurationSection biomes = drop.getConfigurationSection("biomes");
+					if (biomes != null) {
+						for (String sourceBiome : biomes.getKeys(false)) {
+							HiddenOre.getPlugin().getLogger().info("Loading config for biome " + sourceBiome);
+							DropLimitsConfig dlc = grabLimits(biomes.getConfigurationSection(sourceBiome), dc.limits);
+							dc.addBiomeLimits(sourceBiome, dlc);
+						}
+					}
+
+					bc.addDropConfig(sourceDrop, dc);
+				}
 				List<BlockConfig> bclist = i.blockConfigs.get(cBlockName);//sourceBlock);
 				if (bclist == null) {
 					bclist = new LinkedList<BlockConfig>();
 				}
 				bclist.add(bc);
 
+				i.blockConfigsByName.put(sourceBlock, bc);
 				i.blockConfigs.put(cBlockName, bclist);//sourceBlock, bclist);
 			}
 		} else {
@@ -153,11 +205,10 @@ public final class Config {
 				double areaSpan = vein.getDouble("areaSpan");
 				double heightLength = vein.getDouble("heightLength");
 				double densityLength = vein.getDouble("densityLength");
-				ConfigurationSection block = vein.getConfigurationSection("block");
-				BlockConfig bc = loadBlockConfig(block);
-				if(bc == null) continue;
+				String blockConfig = vein.getString("blockConfig");
+				if(!i.blockConfigsByName.containsKey(blockConfig)) continue;
 				VeinConfig vc = new VeinConfig(seed, density, maxSpan, densityBonus, areaHeight,
-						areaSpan, heightLength, densityLength, bc);
+						areaSpan, heightLength, densityLength, blockConfig);
 				i.veins.add(vc);
 			}
 		}
@@ -165,62 +216,6 @@ public final class Config {
 		instance = i;
 	}
 	
-	private static BlockConfig loadBlockConfig(ConfigurationSection block) {
-		String cBlockName = block.getString("material");
-		if (cBlockName == null) {
-			HiddenOre.getPlugin().getLogger().warning("Failed to find material for " + block.getName());
-			return null;
-		}
-		String cPrefix = block.getString("prefix", null);
-		Boolean cMultiple = block.getBoolean("dropMultiple", false);
-		Boolean cSuppress = block.getBoolean("suppressDrops", false);
-		List<Byte> subtypes = (block.getBoolean("allTypes", true)) ? null : block.getByteList("types");
-		
-		// add what blocks should be transformed, if transformation is used.
-		ConfigurationSection validTransforms = block.getConfigurationSection("validTransforms");
-		List<BlockConfig.MaterialWrapper> transformThese = new ArrayList<BlockConfig.MaterialWrapper>();
-		if (validTransforms != null) {
-			for (String transformL : validTransforms.getKeys(false)) {
-				ConfigurationSection transform = validTransforms.getConfigurationSection(transformL);
-				String tBlockName = transform.getString("material");
-				List<Byte> tSubtypes = (transform.getBoolean("allTypes", true)) ? null : transform.getByteList("types");
-				transformThese.add(new BlockConfig.MaterialWrapper(tBlockName, tSubtypes));
-			}
-		} else {
-			validTransforms = null;
-		}
-		BlockConfig bc = new BlockConfig(cBlockName, subtypes, cMultiple, cSuppress, cPrefix, transformThese);
-
-		// now add drops.
-		ConfigurationSection drops = block.getConfigurationSection("drops");
-		for (String sourceDrop : drops.getKeys(false)) {
-			HiddenOre.getPlugin().getLogger().info("Loading config for drop " + sourceDrop);
-			ConfigurationSection drop = drops.getConfigurationSection(sourceDrop);
-			String dPrefix = drop.getString("prefix", null);
-			@SuppressWarnings("unchecked")
-			List<ItemStack> items = (List<ItemStack>) drop.getList("package");
-			boolean transformIfAble = drop.getBoolean("transformIfAble", false);
-			boolean transformDropIfFails = drop.getBoolean("transformDropIfFails", false);
-			int transformMaxDropsIfFails = drop.getInt("transformMaxDropsIfFails", 1);
-
-			DropConfig dc = new DropConfig(sourceDrop, DropItemConfig.transform(items), 
-					transformIfAble, transformDropIfFails, transformMaxDropsIfFails,
-					dPrefix, grabLimits(drop, new DropLimitsConfig()));
-
-			ConfigurationSection biomes = drop.getConfigurationSection("biomes");
-			if (biomes != null) {
-				for (String sourceBiome : biomes.getKeys(false)) {
-					HiddenOre.getPlugin().getLogger().info("Loading config for biome " + sourceBiome);
-					DropLimitsConfig dlc = grabLimits(biomes.getConfigurationSection(sourceBiome), dc.limits);
-					dc.addBiomeLimits(sourceBiome, dlc);
-				}
-			}
-
-			bc.addDropConfig(sourceDrop, dc);
-		}
-		return bc;
-	}
-
 	private static DropLimitsConfig grabLimits(ConfigurationSection drop, DropLimitsConfig parent) {
 		DropLimitsConfig dlc = new DropLimitsConfig();
 		dlc.setTools(drop.isSet("tools") ? drop.getStringList("tools") : parent.tools);
@@ -273,6 +268,10 @@ public final class Config {
 			}
 		}
 		return null;
+	}
+	
+	public static BlockConfig getBlockConfig(String name) {
+		return instance.blockConfigsByName.get(name);
 	}
 	
 	public static List<VeinConfig> getVeinConfigs() {

@@ -6,7 +6,7 @@ import org.bukkit.util.noise.SimplexNoiseGenerator;
 
 public class VeinConfig {
 	
-	private BlockConfig blockConfig;
+	private String blockConfig;
 	private double density;
 	private double maxSpan;
 	private double densityBonus;
@@ -20,7 +20,7 @@ public class VeinConfig {
 	
 	
 	public VeinConfig(int seed, double density, double maxSpan, double densityBonus, double areaHeight,
-			double areaSpan, double heightLength, double densityLength, BlockConfig blockConfig) {
+			double areaSpan, double heightLength, double densityLength, String blockConfig) {
 		this.blockConfig = blockConfig;
 		this.density = density;
 		this.maxSpan = maxSpan;
@@ -51,7 +51,7 @@ public class VeinConfig {
 		return (densityNoiseGen.noise(x / densityLength, z / densityLength) + densityBonus) * density;
 	}
 	
-	public BlockConfig getBlockConfig() {
+	public String getBlockConfig() {
 		return blockConfig;
 	}
 }
