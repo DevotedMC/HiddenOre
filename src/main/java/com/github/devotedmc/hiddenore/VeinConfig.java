@@ -1,12 +1,14 @@
 package com.github.devotedmc.hiddenore;
 
+import java.util.List;
+
 import org.bukkit.Location;
 import org.bukkit.util.noise.NoiseGenerator;
 import org.bukkit.util.noise.SimplexNoiseGenerator;
 
 public class VeinConfig {
 	
-	private String blockConfig;
+	private List<String> loots;
 	private double density;
 	private double maxSpan;
 	private double densityBonus;
@@ -20,8 +22,8 @@ public class VeinConfig {
 	
 	
 	public VeinConfig(int seed, double density, double maxSpan, double densityBonus, double areaHeight,
-			double areaSpan, double heightLength, double densityLength, String blockConfig) {
-		this.blockConfig = blockConfig;
+			double areaSpan, double heightLength, double densityLength, List<String> loots) {
+		this.loots = loots;
 		this.density = density;
 		this.maxSpan = maxSpan;
 		this.densityBonus = densityBonus;
@@ -51,7 +53,7 @@ public class VeinConfig {
 		return (densityNoiseGen.noise(x / densityLength, z / densityLength) + densityBonus) * density;
 	}
 	
-	public String getBlockConfig() {
-		return blockConfig;
+	public List<String> getLoots() {
+		return loots;
 	}
 }

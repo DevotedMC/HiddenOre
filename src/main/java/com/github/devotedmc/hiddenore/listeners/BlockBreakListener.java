@@ -28,8 +28,9 @@ import com.github.devotedmc.hiddenore.BlockConfig;
 import com.github.devotedmc.hiddenore.Config;
 import com.github.devotedmc.hiddenore.DropConfig;
 import com.github.devotedmc.hiddenore.HiddenOre;
+import com.github.devotedmc.hiddenore.LootConfig;
 import com.github.devotedmc.hiddenore.ToolConfig;
-import com.github.devotedmc.hiddenore.VeinConfig;
+import com.github.devotedmc.hiddenore.TransformConfig;
 import com.github.devotedmc.hiddenore.events.HiddenOreEvent;
 import com.github.devotedmc.hiddenore.events.HiddenOreGenerateEvent;
 import com.github.devotedmc.hiddenore.util.FakePlayer;
@@ -71,25 +72,11 @@ public class BlockBreakListener implements Listener {
 		Player p = event.getPlayer();
 		// There is no player responsible.
 		if (p == null) return;
-		
-		for(VeinConfig vein : Config.getVeinConfigs()) {
-			BlockConfig bc = Config.getBlockConfig(vein.getBlockConfig());
-			if(Material.valueOf(bc.getMaterial()) == b.getType() && bc.checkSubType(b.getData())) {
-				double chance = vein.getOreChance(b.getLocation());
-				if(attemptHiddenOre(p, b, bc, event, chance)) {
-					return;
-				}
-			}
-		}
 
 		String blockName = b.getType().name();
 		Byte sb = b.getData();
 		BlockConfig bc = Config.isDropBlock(blockName, sb);
-		attemptHiddenOre(p, b, bc, event, 1);
-	}
-	
-	@SuppressWarnings("deprecation")
-	private boolean attemptHiddenOre(Player p, Block b, BlockConfig bc, BlockBreakEvent event, double dropChance) {
+		
 		if(bc != null && bc.suppressDrops) {
 			debug("Attempting to suppress break of tracked type {0}", bc.getMaterial());
 			HiddenOreGenerateEvent hoges = new HiddenOreGenerateEvent(p, b, Material.AIR);
@@ -101,12 +88,12 @@ public class BlockBreakListener implements Listener {
 			bc = null;
 		}
 		
-		if(bc == null) return false;
+		if(bc == null) return;
 		
 		// Check with out tracker to see if any more drops are available in this little slice of the world.
 		if (!plugin.getTracking().trackBreak(event.getBlock().getLocation())) {
 			debug("Drop skipped at {0} - layer break max met", event.getBlock().getLocation());
-			return false;
+			return;
 		}
 		
 		debug("Break of tracked type {0} by {1}", bc.getMaterial(), p.getDisplayName());
@@ -116,7 +103,7 @@ public class BlockBreakListener implements Listener {
 		// Check SilkTouch failfast, if configured.
 		if (!Config.instance.ignoreSilktouch && inMainHand != null && inMainHand.hasItemMeta() && 
 			inMainHand.getEnchantments() != null && inMainHand.getEnchantments().containsKey(Enchantment.SILK_TOUCH)) {
-			return false;
+			return;
 		}
 		
 		boolean hasDrop = false;
@@ -126,52 +113,52 @@ public class BlockBreakListener implements Listener {
 		String biomeName = b.getBiome().name();
 		
 		if (bc.dropMultiple) {
-			for (String drop : bc.getDrops()) {
-				DropConfig dc = bc.getDropConfig(drop);
+			double dropChance = 1.0;
+			for (String lName : bc.getLoots()) {
+				LootConfig loot = Config.getLoot(lName);
 
-				if (!dc.dropsWithTool(biomeName, inMainHand)) {
- 					debug("Cannot drop {0} - wrong tool", drop);
+				if (!loot.dropsWithTool(biomeName, inMainHand)) {
+ 					debug("Cannot drop {0} - wrong tool", lName);
 					continue;
 				}
 
-				if (b.getLocation().getBlockY() > dc.getMaxY(biomeName)
-						|| b.getLocation().getBlockY() < dc.getMinY(biomeName)) {
-					debug("Cannot drop {0} - wrong Y", drop);
+				if (b.getLocation().getBlockY() > loot.getMaxY(biomeName)
+						|| b.getLocation().getBlockY() < loot.getMinY(biomeName)) {
+					debug("Cannot drop {0} - wrong Y", lName);
 					continue;
 				}
 				
-				ToolConfig dropModifier = dc.dropsWithToolConfig(biomeName, inMainHand);
+				ToolConfig dropModifier = loot.dropsWithToolConfig(biomeName, inMainHand);
 
-				dropChance *= dc.getChance(biomeName) 
+				dropChance *= loot.getChance(biomeName) 
 						* (dropModifier == null ? 1.0 : dropModifier.getDropChanceModifier());
 
 				// Random check to decide whether or not the special drop should be dropped
 				if (dropChance > Math.random()) {
 					hasDrop = doDrops(hasDrop, b, event, p, biomeName, dropModifier, 
-							drop, dc, bc.getMaterial(), bc, b.getData(), alertUser);
+							loot, bc.getMaterial(), bc, b.getData(), alertUser);
 					if (!hasDrop) {
 						// Core of event cancelled!
-						return false;
+						return;
 					} else {
-						doXP(dc, biomeName, dropModifier, b.getLocation());
+						doXP(loot, biomeName, dropModifier, b.getLocation());
 					}
 				}
 			}
 		} else {
-			String drop = bc.getDropConfig(Math.random(), biomeName, inMainHand, 
-					b.getLocation().getBlockY());
+			LootConfig loot = bc.getLootConfig(Math.random(), biomeName, inMainHand, 
+					b.getLocation());
 
-			if (drop != null) {
-				DropConfig dc = bc.getDropConfig(drop);
-				ToolConfig tc = dc.dropsWithToolConfig(biomeName, inMainHand);
+			if (loot != null) {
+				ToolConfig tc = loot.dropsWithToolConfig(biomeName, inMainHand);
 				
 				hasDrop = doDrops(hasDrop, b, event, p, biomeName, tc, 
-						drop, dc, bc.getMaterial(), bc, b.getData(), alertUser);
+						loot, bc.getMaterial(), bc, b.getData(), alertUser);
 				if (!hasDrop) {
 					// Core of event cancelled!
-					return false;
+					return;
 				} else {
-					doXP(dc, biomeName, tc, b.getLocation());
+					doXP(loot, biomeName, tc, b.getLocation());
 				}
 			}
 		}
@@ -182,14 +169,14 @@ public class BlockBreakListener implements Listener {
 
 			event.getPlayer().sendMessage(ChatColor.GOLD + alertUser.toString());
 		}
-		return true;
+		return;
 	}
 
-	private void doXP(DropConfig dc, String biomeName, ToolConfig dropModifier, Location loc) {
-		double xpChance = dc.getXPChance(biomeName) 
+	private void doXP(LootConfig loot, String biomeName, ToolConfig dropModifier, Location loc) {
+		double xpChance = loot.getXPChance(biomeName) 
 				* (dropModifier == null ? 1.0 : dropModifier.getDropChanceModifier());
 		if (xpChance > Math.random()) {
-			int toXP = dc.renderXP(biomeName, dropModifier);
+			int toXP = loot.renderXP(biomeName, dropModifier);
 			if (toXP > 0) {
 				Entity xp = loc.getWorld().spawnEntity(loc, EntityType.EXPERIENCE_ORB);
 				if (xp instanceof ExperienceOrb) {
@@ -218,7 +205,7 @@ public class BlockBreakListener implements Listener {
 	 * @return true if everything went well, false if the generate was cancelled or other error.
 	 */
 	private Boolean doDrops(boolean clearBlock, Block sourceBlock, BlockBreakEvent event, Player player, String biomeName, ToolConfig dropTool, 
-			String dropName, DropConfig dropConfig, String blockName, BlockConfig blockConfig, byte blockSubType, StringBuffer alertBuffer) {
+			LootConfig loot, String blockName, BlockConfig blockConfig, byte blockSubType, StringBuffer alertBuffer) {
 		// Remove block, drop special drop and cancel the event
 		if (!clearBlock) {
 			HiddenOreGenerateEvent hoge = new HiddenOreGenerateEvent(player, sourceBlock, Material.AIR);
@@ -233,17 +220,14 @@ public class BlockBreakListener implements Listener {
 			}
 		}
 		
-		final List<ItemStack> items = dropConfig.renderDrop(biomeName, dropTool);
+		final List<ItemStack> items = loot.renderLoot(biomeName, dropTool);
 		final Location sourceLocation = sourceBlock.getLocation();
-		if (items.size() > 0) {
-			doActualDrops(items, sourceLocation, player, dropName, blockName, blockConfig, blockSubType, alertBuffer);
-		}
-
-		if (dropConfig.transformIfAble) {
-			final List<ItemStack> transform = dropConfig.renderTransform(biomeName, dropTool);
-			if (transform.size() > 0) {
-				doActualGenerate(transform, sourceLocation, player, dropName, blockName, blockConfig, 
-						blockSubType, alertBuffer, dropConfig);
+		if(items.size() > 0) {
+			if(loot instanceof DropConfig) {
+				doActualDrops(items, sourceLocation, player, loot, blockName, blockConfig, blockSubType, alertBuffer);
+			} else {
+				doActualGenerate(items, sourceLocation, player, blockName, blockConfig,
+						blockSubType, alertBuffer, (TransformConfig)loot);
 			}
 		}
 		
@@ -254,7 +238,7 @@ public class BlockBreakListener implements Listener {
 	}
 
 	private void doActualDrops(final List<ItemStack> items, final Location sourceLocation, final Player player,
-			String dropName, String blockName, BlockConfig blockConfig, byte blockSubType, StringBuffer alertBuffer) {
+			LootConfig loot, String blockName, BlockConfig blockConfig, byte blockSubType, StringBuffer alertBuffer) {
 		final HiddenOreEvent hoe = new HiddenOreEvent(player, sourceLocation, items);
 		Bukkit.getPluginManager().callEvent(hoe);
 		if (!hoe.isCancelled()) {
@@ -277,8 +261,8 @@ public class BlockBreakListener implements Listener {
 			}
 			
 			if (Config.isAlertUser()) {
-				if (blockConfig.hasCustomPrefix(dropName)) {
-					StringBuffer customAlerts = new StringBuffer(blockConfig.getPrefix(dropName));
+				if (loot.prefix != null) {
+					StringBuffer customAlerts = new StringBuffer(loot.prefix);
 
 					for (ItemStack item : hoe.getDrops()) {
 						String name = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? 
@@ -297,14 +281,13 @@ public class BlockBreakListener implements Listener {
 				}
 			}
 		} else {
-			log("For {0} at {1}, HiddenOre {2} cancelled.", player.getDisplayName(), player.getLocation(), dropName);
+			log("For {0} at {1}, HiddenOre {2} cancelled.", player.getDisplayName(), player.getLocation(), loot.dropName);
 		}
 		
 	}
 
 	private void doActualGenerate(final List<ItemStack> items, final Location sourceLocation, final Player player,
-			String dropName, String blockName, BlockConfig blockConfig, byte blockSubType, StringBuffer alertBuffer,
-			DropConfig dropConfig) {
+			String blockName, BlockConfig blockConfig, byte blockSubType, StringBuffer alertBuffer, TransformConfig loot) {
 		int maxWalk = 0;
 		int cPlace = 0;
 		double cAttempt = 0;
@@ -344,12 +327,14 @@ public class BlockBreakListener implements Listener {
 				maxWalk --;
 			}
 
-			if (xform.getAmount() - cPlace < 1 && dropConfig.dropIfTransformFails) { // total failure.
+			if (xform.getAmount() - cPlace < 1 && loot.isDropIfTransformFails()) { // total failure.
 				ItemStack toDrop = xform.clone();
-				toDrop.setAmount(Math.min(xform.getAmount(), dropConfig.maxDropsIfTransformFails));
+				toDrop.setAmount(Math.min(xform.getAmount(), loot.getMaxDropsIfTransformFails()));
 				final List<ItemStack> newDrops = new ArrayList<ItemStack>();
 				newDrops.add(toDrop);
-				doActualDrops(newDrops, sourceLocation, player, dropName, blockName, blockConfig, blockSubType, alertBuffer);
+				LootConfig failLoot = Config.getLoot(loot.getFailConfig());
+				if(failLoot == null) return;
+				doActualDrops(newDrops, sourceLocation, player, failLoot, blockName, blockConfig, blockSubType, alertBuffer);
 			} else {
 				String name = xform.hasItemMeta() && xform.getItemMeta().hasDisplayName() ? 
 						xform.getItemMeta().getDisplayName() : Config.getPrettyName(xform.getType().name(), xform.getDurability());
@@ -361,8 +346,8 @@ public class BlockBreakListener implements Listener {
 				
 				// Anything to tell anyone about?
 				if (cPlace < xform.getAmount() && Config.isAlertUser()) {
-					if (blockConfig.hasCustomPrefix(dropName)) {
-						StringBuffer customAlerts = new StringBuffer(blockConfig.getPrefix(dropName));
+					if (loot.prefix != null) {
+						StringBuffer customAlerts = new StringBuffer(loot.prefix);
 						
 						customAlerts.append(" ").append(xform.getAmount() - cPlace).append(" ").append(
 								name).append(" nearby"); // TODO: Replace with configured suffix
