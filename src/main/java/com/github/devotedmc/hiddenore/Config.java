@@ -150,6 +150,8 @@ public final class Config {
 					validTransforms = null;
 				}
 				BlockConfig bc = new BlockConfig(cBlockName, subtypes, cMultiple, cSuppress, cPrefix, transformThese);
+				bc.addLootConfigs(block.getStringList("drops"));
+				bc.addVeinConfigs(block.getStringList("veins"));
 
 				// now add drops.
 				List<BlockConfig> bclist = i.blockConfigs.get(cBlockName);//sourceBlock);
@@ -165,18 +167,23 @@ public final class Config {
 		}
 		
 		if(file.contains("veins")) {
+			HiddenOre.getPlugin().getLogger().info("Loading vein configs");
 			ConfigurationSection veinConfigs = file.getConfigurationSection("veins");
 			for(String key : veinConfigs.getKeys(false)) {
+				HiddenOre.getPlugin().getLogger().info("Loading config for " + key);
 				ConfigurationSection veinConfig = veinConfigs.getConfigurationSection(key);
 				VeinConfig vein = loadVeinConfig(veinConfig);
 				if(vein != null) {
+					if(Config.isDebug) 
 					i.veinConfigs.put(key, vein);
 				}
 			}
 		}
 		if(file.contains("drops")) {
+			HiddenOre.getPlugin().getLogger().info("Loading drop configs");
 			ConfigurationSection dropConfigs = file.getConfigurationSection("drops");
 			for(String key : dropConfigs.getKeys(false)) {
+				HiddenOre.getPlugin().getLogger().info("Loading config for " + key);
 				ConfigurationSection dropConfig = dropConfigs.getConfigurationSection(key);
 				DropConfig drop = loadDropConfig(dropConfig);
 				if(drop != null) {
@@ -185,8 +192,10 @@ public final class Config {
 			}
 		}
 		if(file.contains("transform")) {
+			HiddenOre.getPlugin().getLogger().info("Loading transform configs");
 			ConfigurationSection transConfigs = file.getConfigurationSection("transform");
 			for(String key : transConfigs.getKeys(false)) {
+				HiddenOre.getPlugin().getLogger().info("Loading config for " + key);
 				ConfigurationSection transConfig = transConfigs.getConfigurationSection(key);
 				TransformConfig transform = loadTransformConfig(transConfig);
 				if(transform != null) {
@@ -212,20 +221,20 @@ public final class Config {
 		return vc;
 	}
 	
-	private static TransformConfig loadTransformConfig(ConfigurationSection gen) {
-		String source = gen.getName();
-		String dPrefix = gen.getString("prefix", null);
+	private static TransformConfig loadTransformConfig(ConfigurationSection trans) {
+		String source = trans.getName();
+		String dPrefix = trans.getString("prefix", null);
 		@SuppressWarnings("unchecked")
-		List<ItemStack> items = (List<ItemStack>) gen.getList("package");
-		String failConfig = gen.getString("failConfig");
-		boolean dropIfTransformFails = gen.getBoolean("dropIfTransformFails", false);
-		int maxDropsIfTransformFails = gen.getInt("maxDropsIfTransformFails", 1);
+		List<ItemStack> items = (List<ItemStack>) trans.getList("package");
+		String failConfig = trans.getString("failConfig");
+		boolean dropIfTransformFails = trans.getBoolean("dropIfTransformFails", false);
+		int maxDropsIfTransformFails = trans.getInt("maxDropsIfTransformFails", 1);
 
 		TransformConfig gc = new TransformConfig(source, DropItemConfig.transform(items),
 				failConfig, dropIfTransformFails, maxDropsIfTransformFails,
-				dPrefix, grabLimits(gen, new DropLimitsConfig()));
+				dPrefix, grabLimits(trans, new DropLimitsConfig()));
 
-		ConfigurationSection biomes = gen.getConfigurationSection("biomes");
+		ConfigurationSection biomes = trans.getConfigurationSection("biomes");
 		if (biomes != null) {
 			for (String sourceBiome : biomes.getKeys(false)) {
 				HiddenOre.getPlugin().getLogger().info("Loading config for biome " + sourceBiome);

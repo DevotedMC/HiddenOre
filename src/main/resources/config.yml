@@ -1,3 +1,4 @@
+type: CHUNK
 prefix: You found a hidden ore!
 alert_user: true
 list_drops: true

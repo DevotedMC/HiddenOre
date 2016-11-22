@@ -67,12 +67,12 @@ public class BlockConfig {
 		return false;
 	}
 
-	public void addDropConfigs(List<String> drops) {
-		drops.addAll(drops);
+	public void addLootConfigs(List<String> loots) {
+		this.loots.addAll(loots);
 	}
 	
 	public void addVeinConfigs(List<String> veins) {
-		veins.addAll(veins);
+		this.veins.addAll(veins);
 	}
 	
 	public List<String> getLoots() {
@@ -93,7 +93,6 @@ public class BlockConfig {
 					&& loc.getBlockY() >= loot.getMinY(biome)) {
 					ToolConfig tc = loot.dropsWithToolConfig(biome, tool);
 					localChance = loot.getChance(biome) * (tc == null ? 1.0 : tc.getDropChanceModifier());
-					localChance += 1.0;
 					localChance *= vein.getOreChance(loc);
 					if(dice >= cumChance && dice < cumChance + localChance) {
 						return loot;

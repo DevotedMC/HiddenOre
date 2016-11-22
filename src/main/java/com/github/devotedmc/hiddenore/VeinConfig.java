@@ -42,7 +42,7 @@ public class VeinConfig {
 	public double getOreChance(double x, int y, double z) {
 		double chance = Math.abs(y-getVeinHeight(x, z));
 		if(chance > maxSpan) return 0;
-		return Math.max(((Math.cos(chance * Math.PI / maxSpan) + 1) / 2) * getVeinDensity(x, z), 0);
+		return ((Math.cos(chance * Math.PI / maxSpan) + 1) / 2) * getVeinDensity(x, z);
 	}
 	
 	private double getVeinHeight(double x, double z) {
