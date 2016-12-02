@@ -131,7 +131,6 @@ public final class Config {
 					HiddenOre.getPlugin().getLogger().warning("Failed to find material for " + sourceBlock);
 					continue;
 				}
-				String cPrefix = block.getString("prefix", null);
 				Boolean cMultiple = block.getBoolean("dropMultiple", false);
 				Boolean cSuppress = block.getBoolean("suppressDrops", false);
 				List<Byte> subtypes = (block.getBoolean("allTypes", true)) ? null : block.getByteList("types");
@@ -149,7 +148,7 @@ public final class Config {
 				} else {
 					validTransforms = null;
 				}
-				BlockConfig bc = new BlockConfig(cBlockName, subtypes, cMultiple, cSuppress, cPrefix, transformThese);
+				BlockConfig bc = new BlockConfig(cBlockName, subtypes, cMultiple, cSuppress, transformThese);
 				bc.addLootConfigs(block.getStringList("drops"));
 				bc.addVeinConfigs(block.getStringList("veins"));
 
@@ -207,7 +206,8 @@ public final class Config {
 	}
 	
 	private static VeinConfig loadVeinConfig(ConfigurationSection vein) {
-		int seed = vein.getInt("seed");
+		long densitySeed = vein.getLong("densitySeed");
+		long heightSeed = vein.getLong("heightSeed");
 		double density = vein.getDouble("density");
 		double maxSpan = vein.getDouble("maxSpan");
 		double densityBonus = vein.getDouble("densityBonus");
@@ -216,8 +216,8 @@ public final class Config {
 		double heightLength = vein.getDouble("heightLength");
 		double densityLength = vein.getDouble("densityLength");
 		List<String> loots = vein.getStringList("loots");
-		VeinConfig vc = new VeinConfig(seed, density, maxSpan, densityBonus, areaHeight,
-				areaSpan, heightLength, densityLength, loots);
+		VeinConfig vc = new VeinConfig(densitySeed, heightSeed, density, maxSpan, 
+				densityBonus, areaHeight, areaSpan, heightLength, densityLength, loots);
 		return vc;
 	}
 	

@@ -21,7 +21,7 @@ public class VeinConfig {
 	private NoiseGenerator densityNoiseGen;
 	
 	
-	public VeinConfig(int seed, double density, double maxSpan, double densityBonus, double areaHeight,
+	public VeinConfig(long densitySeed, long heightSeed, double density, double maxSpan, double densityBonus, double areaHeight,
 			double areaSpan, double heightLength, double densityLength, List<String> loots) {
 		this.loots = loots;
 		this.density = density;
@@ -31,8 +31,8 @@ public class VeinConfig {
 		this.areaSpan = areaSpan;
 		this.heightLength = heightLength;
 		this.densityLength = densityLength;
-		this.heightNoiseGen = new SimplexNoiseGenerator(seed);
-		this.densityNoiseGen = new SimplexNoiseGenerator(seed * 5646468L);
+		this.heightNoiseGen = new SimplexNoiseGenerator(heightSeed);
+		this.densityNoiseGen = new SimplexNoiseGenerator(densitySeed);
 	}
 
 	public double getOreChance(Location loc) {
