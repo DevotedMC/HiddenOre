@@ -35,7 +35,7 @@ public class HiddenOre extends JavaPlugin {
 			public void run() {
 				tracking.save();
 			}
-		}, Config.trackSave, Config.trackSave);
+		}, Config.getTrackSaveInterval(), Config.getTrackSaveInterval());
 		
 		exploitHandler = new ExploitListener(plugin);
 		this.getServer().getPluginManager().registerEvents(exploitHandler, this);

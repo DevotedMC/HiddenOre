@@ -21,8 +21,8 @@ public class CommandHandler implements CommandExecutor {
 			if (sender.hasPermission(plugin.getCommand("hiddenore").getPermission())) {
 				if (args.length >= 2) {
 					if ("debug".equals(args[0])) {
-						Config.isDebug = Boolean.parseBoolean(args[1]);
-						sender.sendMessage("HiddenOre debug mode now " + (Config.isDebug ? "on" : "off"));
+						Config.setDebug(Boolean.parseBoolean(args[1]));
+						sender.sendMessage("HiddenOre debug mode now " + (Config.isDebug() ? "on" : "off"));
 						return true;
 					}
 				} else if (args.length >= 1) {

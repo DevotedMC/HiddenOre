@@ -19,20 +19,18 @@ public class BlockConfig {
 	public boolean suppressDrops;
 	private List<String> loots;
 	private List<String> veins;
-	private String prefix;
-
-	public BlockConfig(String material, boolean dropMultiple, boolean suppressDrops, String prefix, Collection<MaterialWrapper> validGenTypes) {
-		this(material, null, dropMultiple, suppressDrops, prefix, validGenTypes);
+	
+	public BlockConfig(String material, boolean dropMultiple, boolean suppressDrops, Collection<MaterialWrapper> validGenTypes) {
+		this(material, null, dropMultiple, suppressDrops, validGenTypes);
 	}
 
-	public BlockConfig(String material, Collection<Byte> subtype, boolean dropMultiple, boolean suppressDrops, String prefix, Collection<MaterialWrapper> validGenTypes) {
+	public BlockConfig(String material, Collection<Byte> subtype, boolean dropMultiple, boolean suppressDrops, Collection<MaterialWrapper> validGenTypes) {
 		this.material = material;
 		this.subtypes = (subtype != null) ? new HashSet<Byte>(subtype) : new HashSet<Byte>();
 		this.dropMultiple = dropMultiple;
 		this.suppressDrops = suppressDrops;
 		this.loots = new LinkedList<String>();
 		this.veins = new LinkedList<String>();
-		this.prefix = prefix;
 		this.validGenTypes = validGenTypes;
 	}
 
@@ -86,6 +84,9 @@ public class BlockConfig {
 		for(String vName : veins) {
 			VeinConfig vein = Config.getVein(vName);
 			if(vein == null) continue;
+			if(Config.isDebug()) {
+				HiddenOre.getPlugin().getLogger().log(Level.INFO, "Finding loot in vein: {0}", vName);
+			}
 			for(String lName : vein.getLoots()) {
 				LootConfig loot = Config.getLoot(lName);
 				if(loot == null) continue;
@@ -116,7 +117,7 @@ public class BlockConfig {
 				counted++;
 			}
 		}
-		if(Config.isDebug) {
+		if(Config.isDebug()) {
 			HiddenOre.getPlugin().getLogger()
 					.log(Level.INFO, "{0} tested {1} cumm {2} dice", new Object[] {counted, Double.toString(cumChance), Double.toString(dice)});
 		}

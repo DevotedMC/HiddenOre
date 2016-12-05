@@ -48,7 +48,7 @@ public class BlockBreakListener implements Listener {
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onBlockBreak(BlockBreakEvent event) {
 		try {
-			doBlockBreak(event);
+			doBlockBreak(event, true);
 		} catch (NullPointerException npe) {
 			plugin.getLogger().log(Level.WARNING, "Failure in Block Break handling", npe);
 		}
@@ -56,7 +56,7 @@ public class BlockBreakListener implements Listener {
 
 	public static void spoofBlockBreak(Location playerLoc, Block block, ItemStack inHand) {
 		HiddenOre.getPlugin().getBreakListener().doBlockBreak(
-					new BlockBreakEvent(block, new FakePlayer(playerLoc, inHand))
+					new BlockBreakEvent(block, new FakePlayer(playerLoc, inHand)), true
 				);
 	}
 	/**
@@ -67,11 +67,19 @@ public class BlockBreakListener implements Listener {
 	 * @param event
 	 */
 	@SuppressWarnings("deprecation")
-	private void doBlockBreak(BlockBreakEvent event) {
+	private void doBlockBreak(BlockBreakEvent event, boolean real) {
 		Block b = event.getBlock();
 		Player p = event.getPlayer();
 		// There is no player responsible.
 		if (p == null) return;
+		
+		if(Config.isSimulateTrueOre() && !real) {
+			for(BlockFace face : visibleFaces) {
+				Block nextBlock = b.getRelative(face);
+				BlockBreakEvent nextEvent = new BlockBreakEvent(nextBlock, p);
+				doBlockBreak(nextEvent, false);
+			}
+		}
 
 		String blockName = b.getType().name();
 		Byte sb = b.getData();
@@ -101,14 +109,14 @@ public class BlockBreakListener implements Listener {
 		ItemStack inMainHand = p.getInventory().getItemInMainHand();
 		
 		// Check SilkTouch failfast, if configured.
-		if (!Config.instance.ignoreSilktouch && inMainHand != null && inMainHand.hasItemMeta() && 
+		if (!Config.isIgnoreSilkTouch() && inMainHand != null && inMainHand.hasItemMeta() && 
 			inMainHand.getEnchantments() != null && inMainHand.getEnchantments().containsKey(Enchantment.SILK_TOUCH)) {
 			return;
 		}
 		
 		boolean hasDrop = false;
 		
-		StringBuffer alertUser = new StringBuffer().append(Config.instance.defaultPrefix);
+		StringBuffer alertUser = new StringBuffer().append(Config.getPrefix());
 		
 		String biomeName = b.getBiome().name();
 		
@@ -293,6 +301,7 @@ public class BlockBreakListener implements Listener {
 		double cAttempt = 0;
 		boolean tryFacing = false; // pick a facing block of attacked block
 		Block origin = sourceLocation.getBlock();
+		
 		for (ItemStack xform : items) {
 			Material sample = xform.getType();
 			Material expressed = sample;
@@ -300,7 +309,9 @@ public class BlockBreakListener implements Listener {
 			cPlace = xform.getAmount();
 			while (cPlace > 0 && maxWalk > 0) {
 				Block walk = null;
-				if (!tryFacing) {
+				if(origin.getType() != Material.AIR) {
+					walk = origin;
+				} else if (!tryFacing) {
 					// Try to ensure something of the generation is visible.
 					walk = this.getVisibleFacing(origin);
 				} else {
@@ -378,7 +389,7 @@ public class BlockBreakListener implements Listener {
 	}
 
 	private void debug(String message, Object...replace) {
-		if (Config.isDebug) {
+		if (Config.isDebug()) {
 			plugin.getLogger().log(Level.INFO, message, replace);
 		}
 	}

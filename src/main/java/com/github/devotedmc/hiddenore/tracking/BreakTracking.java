@@ -61,7 +61,7 @@ public class BreakTracking {
 						for (int i = 0; i < layers.length; i++) {
 							layers[i] = dis.readShort();
 						}
-						if (Config.isDebug) {
+						if (Config.isDebug()) {
 							HiddenOre.getPlugin().getLogger().info("Loaded layers for chunk " + chunk);
 						}
 						ccnt++;
@@ -113,7 +113,7 @@ public class BreakTracking {
 					oos.writeUTF(world.getKey().toString());
 					long ccnt = 0l;
 					for (Map.Entry<Long, short[]> chunk : world.getValue().entrySet()) {
-						if (Config.isDebug) {
+						if (Config.isDebug()) {
 							HiddenOre.getPlugin().getLogger().info(" Saving chunk " + chunk.getKey());
 						}
 						oos.writeBoolean(true);
@@ -177,7 +177,7 @@ public class BreakTracking {
 			layers[Y]++; // represent new break in layer.
 			ret = true;
 		}
-		if (Config.isDebug) {
+		if (Config.isDebug()) {
 			HiddenOre.getPlugin().getLogger()
 					.info("now world " + world + " chunk " + chunk_id + " layersum " + layers[Y]);
 		}

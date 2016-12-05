@@ -118,7 +118,7 @@ public abstract class LootConfig {
 		double max = getXPMaxAmount(biome) + (modify != null ? modify.getMaxAmountModifier() : 0.0);
 		double amount = (min == max) ? min : (double) ((max - min) * Math.random() + min);
 		
-		if (Config.isDebug) {
+		if (Config.isDebug()) {
 			HiddenOre.getPlugin().getLogger().log(Level.INFO, "Trigger xp {0} [{1}, {2}] = {3}", 
 					new Object[] {dropName, min, max, amount});
 		}

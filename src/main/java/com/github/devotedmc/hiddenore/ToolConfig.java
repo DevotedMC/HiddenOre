@@ -191,7 +191,7 @@ public class ToolConfig {
 						tool.getDouble("modifiers.maxAmount", 0.0)
 					)
 				);
-		if (Config.isDebug) {
+		if (Config.isDebug()) {
 			HiddenOre.getPlugin().getLogger().log(Level.INFO, "Tool {0} defined as: {1}", 
 					new Object[] {tool.getName(), tools.get(tool.getName())});
 		}
