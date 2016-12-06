@@ -14,36 +14,24 @@ import org.bukkit.inventory.ItemStack;
 
 public final class Config {
 
-	public static Config instance;
-	public static boolean isDebug;
-
-	public String defaultPrefix;
-	public boolean alertUser;
-	public boolean listDrops;
-	public boolean ignoreSilktouch;
-	public Map<String, List<BlockConfig>> blockConfigs;
-	public Map<String, NameConfig> prettyNames;
+	private static boolean isDebug = false;
+	private static boolean simulateTrueOre = false;
+	private static String defaultPrefix = "You found a hidden ore!";
+	private static boolean alertUser = false;
+	private static boolean listDrops = false;
+	private static boolean ignoreSilktouch = false;
+	private static Map<String, List<BlockConfig>> blockConfigs;
+	private static Map<String, LootConfig> lootConfigs;
+	private static Map<String, VeinConfig> veinConfigs;
+	private static Map<String, NameConfig> prettyNames;
 
 	private static FileConfiguration file;
 
-	private static String trackFileName;
+	private static String trackFileName = "tracking.dat";
 	private static File trackFile;
-	public static long trackSave;
+	private static long trackSave = 90000l;
 	
-	public int transformAttemptMultiplier = 3;
-
-	private Config() {
-		blockConfigs = new HashMap<String, List<BlockConfig>>();
-		prettyNames = new HashMap<String, NameConfig>();
-		trackFileName = "tracking.dat";
-		trackSave = 90000l;
-		alertUser = false;
-		listDrops = false;
-		isDebug = false;
-		ignoreSilktouch = false;
-		defaultPrefix = "You found hidden ore!";
-		transformAttemptMultiplier = 3;
-	}
+	private static int transformAttemptMultiplier = 3;
 
 	public static void loadConfig() {
 		try {
@@ -55,31 +43,34 @@ public final class Config {
 	}
 
 	public static void doLoad() {
-		Config i = new Config();
-
+		blockConfigs = new HashMap<String, List<BlockConfig>>();
+		lootConfigs = new HashMap<String, LootConfig>();
+		veinConfigs = new HashMap<String, VeinConfig>();
+		prettyNames = new HashMap<String, NameConfig>();
 		isDebug = file.getBoolean("debug", isDebug);
+		simulateTrueOre = file.getBoolean("true_ore", simulateTrueOre);
 
 		trackFileName = file.getString("track_file", trackFileName);
 		trackFile = new File(HiddenOre.getPlugin().getDataFolder(), trackFileName);
 		trackSave = file.getLong("track_save_ticks", trackSave);
 
-		i.ignoreSilktouch = file.getBoolean("ignore_silktouch", i.ignoreSilktouch);
+		ignoreSilktouch = file.getBoolean("ignore_silktouch", ignoreSilktouch);
 
-		i.alertUser = file.getBoolean("alert_user", i.alertUser);
-		i.listDrops = file.getBoolean("list_drops", i.listDrops);
-		i.defaultPrefix = file.getString("prefix", i.defaultPrefix);
-		i.transformAttemptMultiplier = file.getInt("transform_attempt_multiplier", i.transformAttemptMultiplier);
+		alertUser = file.getBoolean("alert_user", alertUser);
+		listDrops = file.getBoolean("list_drops", listDrops);
+		defaultPrefix = file.getString("prefix", defaultPrefix);
+		transformAttemptMultiplier = file.getInt("transform_attempt_multiplier", transformAttemptMultiplier);
 
-		ConfigurationSection prettyNames = file.getConfigurationSection("pretty_names");
-		if (prettyNames != null) {
-			for (String key : prettyNames.getKeys(false)) {
+		ConfigurationSection prettyNamesConfig = file.getConfigurationSection("pretty_names");
+		if (prettyNamesConfig != null) {
+			for (String key : prettyNamesConfig.getKeys(false)) {
 				NameConfig nc = null;
 				/*
 				 * Basically a valid pretty name config can be: pretty_names: BUKKIT_NAME: pretty_name or pretty_names:
 				 * BUKKIT_NAME: name: pretty_name 0: subtype_name 1: subtype_name or any blend.
 				 */
-				if (prettyNames.isConfigurationSection(key)) {
-					ConfigurationSection pName = prettyNames.getConfigurationSection(key);
+				if (prettyNamesConfig.isConfigurationSection(key)) {
+					ConfigurationSection pName = prettyNamesConfig.getConfigurationSection(key);
 					String name = pName.getString("name", key);
 					nc = new NameConfig(name);
 					for (String subtype : pName.getKeys(false)) {
@@ -91,13 +82,13 @@ public final class Config {
 							}
 						}
 					}
-				} else if (prettyNames.isString(key)) {
-					String name = prettyNames.getString(key, key);
+				} else if (prettyNamesConfig.isString(key)) {
+					String name = prettyNamesConfig.getString(key, key);
 					nc = new NameConfig(name);
 				}
 
 				if (nc != null) {
-					i.prettyNames.put(key, nc);
+					prettyNames.put(key, nc);
 				}
 			}
 		} else {
@@ -127,7 +118,6 @@ public final class Config {
 					HiddenOre.getPlugin().getLogger().warning("Failed to find material for " + sourceBlock);
 					continue;
 				}
-				String cPrefix = block.getString("prefix", null);
 				Boolean cMultiple = block.getBoolean("dropMultiple", false);
 				Boolean cSuppress = block.getBoolean("suppressDrops", false);
 				List<Byte> subtypes = (block.getBoolean("allTypes", true)) ? null : block.getByteList("types");
@@ -145,50 +135,121 @@ public final class Config {
 				} else {
 					validTransforms = null;
 				}
-				BlockConfig bc = new BlockConfig(cBlockName, subtypes, cMultiple, cSuppress, cPrefix, transformThese);
+				BlockConfig bc = new BlockConfig(cBlockName, subtypes, cMultiple, cSuppress, transformThese);
+				bc.addLootConfigs(block.getStringList("drops"));
+				bc.addVeinConfigs(block.getStringList("veins"));
 
 				// now add drops.
-				ConfigurationSection drops = block.getConfigurationSection("drops");
-				for (String sourceDrop : drops.getKeys(false)) {
-					HiddenOre.getPlugin().getLogger().info("Loading config for drop " + sourceDrop);
-					ConfigurationSection drop = drops.getConfigurationSection(sourceDrop);
-					String dPrefix = drop.getString("prefix", null);
-					@SuppressWarnings("unchecked")
-					List<ItemStack> items = (List<ItemStack>) drop.getList("package");
-					boolean transformIfAble = drop.getBoolean("transformIfAble", false);
-					boolean transformDropIfFails = drop.getBoolean("transformDropIfFails", false);
-					int transformMaxDropsIfFails = drop.getInt("transformMaxDropsIfFails", 1);
-
-					DropConfig dc = new DropConfig(sourceDrop, DropItemConfig.transform(items), 
-							transformIfAble, transformDropIfFails, transformMaxDropsIfFails,
-							dPrefix, grabLimits(drop, new DropLimitsConfig()));
-
-					ConfigurationSection biomes = drop.getConfigurationSection("biomes");
-					if (biomes != null) {
-						for (String sourceBiome : biomes.getKeys(false)) {
-							HiddenOre.getPlugin().getLogger().info("Loading config for biome " + sourceBiome);
-							DropLimitsConfig dlc = grabLimits(biomes.getConfigurationSection(sourceBiome), dc.limits);
-							dc.addBiomeLimits(sourceBiome, dlc);
-						}
-					}
-
-					bc.addDropConfig(sourceDrop, dc);
-				}
-				List<BlockConfig> bclist = i.blockConfigs.get(cBlockName);//sourceBlock);
+				List<BlockConfig> bclist = blockConfigs.get(cBlockName);//sourceBlock);
 				if (bclist == null) {
 					bclist = new LinkedList<BlockConfig>();
 				}
 				bclist.add(bc);
 
-				i.blockConfigs.put(cBlockName, bclist);//sourceBlock, bclist);
+				blockConfigs.put(cBlockName, bclist);//sourceBlock, bclist);
 			}
 		} else {
 			HiddenOre.getPlugin().getLogger().info("No blocks specified (Why are you using this plugin?)");
 		}
-
-		instance = i;
+		
+		if(file.contains("veins")) {
+			HiddenOre.getPlugin().getLogger().info("Loading vein configs");
+			ConfigurationSection veinConfigSection = file.getConfigurationSection("veins");
+			for(String key : veinConfigSection.getKeys(false)) {
+				HiddenOre.getPlugin().getLogger().info("Loading config for " + key);
+				ConfigurationSection veinConfig = veinConfigSection.getConfigurationSection(key);
+				VeinConfig vein = loadVeinConfig(veinConfig);
+				if(vein != null) {
+					veinConfigs.put(key, vein);
+				}
+			}
+		}
+		if(file.contains("drops")) {
+			HiddenOre.getPlugin().getLogger().info("Loading drop configs");
+			ConfigurationSection dropConfigs = file.getConfigurationSection("drops");
+			for(String key : dropConfigs.getKeys(false)) {
+				HiddenOre.getPlugin().getLogger().info("Loading config for " + key);
+				ConfigurationSection dropConfig = dropConfigs.getConfigurationSection(key);
+				DropConfig drop = loadDropConfig(dropConfig);
+				if(drop != null) {
+					lootConfigs.put(key, drop);
+				}
+			}
+		}
+		if(file.contains("transform")) {
+			HiddenOre.getPlugin().getLogger().info("Loading transform configs");
+			ConfigurationSection transConfigs = file.getConfigurationSection("transform");
+			for(String key : transConfigs.getKeys(false)) {
+				HiddenOre.getPlugin().getLogger().info("Loading config for " + key);
+				ConfigurationSection transConfig = transConfigs.getConfigurationSection(key);
+				TransformConfig transform = loadTransformConfig(transConfig);
+				if(transform != null) {
+					lootConfigs.put(key, transform);
+				}
+			}
+		}
 	}
+	
+	private static VeinConfig loadVeinConfig(ConfigurationSection vein) {
+		long densitySeed = vein.getLong("densitySeed");
+		long heightSeed = vein.getLong("heightSeed");
+		double density = vein.getDouble("density");
+		double maxSpan = vein.getDouble("maxSpan");
+		double densityBonus = vein.getDouble("densityBonus");
+		double areaHeight = vein.getDouble("areaHeight");
+		double areaSpan = vein.getDouble("areaSpan");
+		double heightLength = vein.getDouble("heightLength");
+		double densityLength = vein.getDouble("densityLength");
+		List<String> loots = vein.getStringList("loots");
+		VeinConfig vc = new VeinConfig(densitySeed, heightSeed, density, maxSpan, 
+				densityBonus, areaHeight, areaSpan, heightLength, densityLength, loots);
+		return vc;
+	}
+	
+	private static TransformConfig loadTransformConfig(ConfigurationSection trans) {
+		String source = trans.getName();
+		String dPrefix = trans.getString("prefix", defaultPrefix);
+		@SuppressWarnings("unchecked")
+		List<ItemStack> items = (List<ItemStack>) trans.getList("package");
+		String failConfig = trans.getString("failConfig");
+		boolean dropIfTransformFails = trans.getBoolean("dropIfTransformFails", false);
+		int maxDropsIfTransformFails = trans.getInt("maxDropsIfTransformFails", 1);
 
+		TransformConfig gc = new TransformConfig(source, DropItemConfig.transform(items),
+				failConfig, dropIfTransformFails, maxDropsIfTransformFails,
+				dPrefix, grabLimits(trans, new DropLimitsConfig()));
+
+		ConfigurationSection biomes = trans.getConfigurationSection("biomes");
+		if (biomes != null) {
+			for (String sourceBiome : biomes.getKeys(false)) {
+				HiddenOre.getPlugin().getLogger().info("Loading config for biome " + sourceBiome);
+				DropLimitsConfig dlc = grabLimits(biomes.getConfigurationSection(sourceBiome), gc.limits);
+				gc.addBiomeLimits(sourceBiome, dlc);
+			}
+		}
+		return gc;
+	}
+	
+	private static DropConfig loadDropConfig(ConfigurationSection drop) {
+		String source = drop.getName();
+		String dPrefix = drop.getString("prefix", defaultPrefix);
+		@SuppressWarnings("unchecked")
+		List<ItemStack> items = (List<ItemStack>) drop.getList("package");
+
+		DropConfig dc = new DropConfig(source, DropItemConfig.transform(items), 
+				dPrefix, grabLimits(drop, new DropLimitsConfig()));
+
+		ConfigurationSection biomes = drop.getConfigurationSection("biomes");
+		if (biomes != null) {
+			for (String sourceBiome : biomes.getKeys(false)) {
+				HiddenOre.getPlugin().getLogger().info("Loading config for biome " + sourceBiome);
+				DropLimitsConfig dlc = grabLimits(biomes.getConfigurationSection(sourceBiome), dc.limits);
+				dc.addBiomeLimits(sourceBiome, dlc);
+			}
+		}
+		return dc;
+	}
+	
 	private static DropLimitsConfig grabLimits(ConfigurationSection drop, DropLimitsConfig parent) {
 		DropLimitsConfig dlc = new DropLimitsConfig();
 		dlc.setTools(drop.isSet("tools") ? drop.getStringList("tools") : parent.tools);
@@ -231,7 +292,7 @@ public final class Config {
 	}
 
 	public static BlockConfig isDropBlock(String block, byte subtype) {
-		List<BlockConfig> bcs = instance.blockConfigs.get(block);
+		List<BlockConfig> bcs = blockConfigs.get(block);
 		if (bcs != null && bcs.size() > 0) {
 			// return first match
 			for (BlockConfig bc : bcs) {
@@ -242,27 +303,35 @@ public final class Config {
 		}
 		return null;
 	}
-
+	
+	public static VeinConfig getVein(String name) {
+		return veinConfigs.get(name);
+	}
+	
+	public static LootConfig getLoot(String name) {
+		return lootConfigs.get(name);
+	}
+	
 	public static String getPrefix(String block, byte subtype, String drop) {
 		BlockConfig bc = isDropBlock(block, subtype);
-		String pref = (bc == null) ? instance.defaultPrefix : bc.getPrefix(drop);
-		return (pref == null ? instance.defaultPrefix : pref);
+		String pref = (bc == null) ? defaultPrefix : lootConfigs.get(drop).prefix;
+		return (pref == null ? defaultPrefix : pref);
 	}
 
 	public static String getPrefix() {
-		return instance.defaultPrefix;
+		return defaultPrefix;
 	}
 
 	public static boolean isAlertUser() {
-		return instance.alertUser;
+		return alertUser;
 	}
 
 	public static boolean isListDrops() {
-		return instance.listDrops;
+		return listDrops;
 	}
 
 	public static String getPrettyName(String name, short durability) {
-		NameConfig nc = instance.prettyNames.get(name);
+		NameConfig nc = prettyNames.get(name);
 		String pref = (nc == null) ? name : nc.getSubTypePrettyName(durability);
 		return (pref == null) ? name : pref;
 	}
@@ -272,6 +341,26 @@ public final class Config {
 	}
 	
 	public static int getTransformAttemptMultiplier() {
-		return instance.transformAttemptMultiplier;
+		return transformAttemptMultiplier;
+	}
+	
+	public static boolean isDebug() {
+		return isDebug;
+	}
+	
+	public static long getTrackSaveInterval() {
+		return trackSave;
+	}
+	
+	public static boolean isIgnoreSilkTouch() {
+		return ignoreSilktouch;
+	}
+	
+	public static boolean isSimulateTrueOre() {
+		return simulateTrueOre;
+	}
+	
+	public static void setDebug(boolean debug) {
+		isDebug = debug;
 	}
 }

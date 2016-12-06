@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.logging.Level;
 
 import org.bukkit.configuration.ConfigurationSection;
@@ -192,7 +191,7 @@ public class ToolConfig {
 						tool.getDouble("modifiers.maxAmount", 0.0)
 					)
 				);
-		if (Config.isDebug) {
+		if (Config.isDebug()) {
 			HiddenOre.getPlugin().getLogger().log(Level.INFO, "Tool {0} defined as: {1}", 
 					new Object[] {tool.getName(), tools.get(tool.getName())});
 		}

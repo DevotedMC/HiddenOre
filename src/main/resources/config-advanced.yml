@@ -1,3 +1,4 @@
+type: CHUNK
 #This config is meant to illustrate more advanced uses of HiddenOre features, including the
 # full depth of the tool config and what it means, and how it works in combination with other
 # drops and configs.

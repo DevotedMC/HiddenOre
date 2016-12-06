@@ -1,0 +1,201 @@
+prefix: You found a hidden ore!
+alert_user: true
+list_drops: false
+debug: false
+ignore_silktouch: true
+#If true will attempt to hiddenore-ify blocks around the block broken by the player
+true_ore: true
+
+transform_attempt_multiplier: 3
+tools:
+ anything:
+  ignore:
+   all: true
+  modifiers:
+   dropChance: 1.0
+   minAmount: 0.0
+   maxAmount: 0.0
+ # Give the item a "friendly name" that you'll use in the "tools" section of each drop config.
+ wood_pickaxe:
+  # Open an issue if the config-advanced.yml data doesn't give you enough to go on to 
+  #  design the template of your desire.
+  template:
+   ==: org.bukkit.inventory.ItemStack
+   type: WOOD_PICKAXE
+   amount: 1
+  ignore:
+   # Ignore the amount held.
+   amount: true
+   # Ignore the durability of the item held.
+   durability: true
+   # Ignore all enchantments.
+   enchants: true
+   # Ignore any enchantments not specified in the template
+   otherEnchants: true
+   # Ignore the specific lvl of the enchantments considered
+   enchantsLvl: true
+   # Ignore any differences in lore
+   lore: true
+   # Ignore any differences in display name.
+   name: true
+  modifiers:
+   # Multiplier to drop chance; applied _after_ biome computation
+   dropChance: 1.0
+   # Adder on minimum drop size; so, drop config min + this min.
+   minAmount: 0.0
+   # Adder on maximum drop size; so, drop config max + this max. Both can be negative.
+   maxAmount: 0.0
+ gold_pickaxe:
+  template:
+   ==: org.bukkit.inventory.ItemStack
+   type: GOLD_PICKAXE
+   amount: 1
+  ignore:
+   amount: true
+   durability: true
+   enchants: true
+   otherEnchants: true
+   enchantsLvl: true
+   lore: true
+   name: true
+  modifiers:
+   dropChance: 1.0
+   minAmount: 0.0
+   maxAmount: 0.0
+ iron_pickaxe:
+  template:
+   ==: org.bukkit.inventory.ItemStack
+   type: IRON_PICKAXE
+   amount: 1
+  ignore:
+   amount: true
+   durability: true
+   enchants: true
+   otherEnchants: true
+   enchantsLvl: true
+   lore: true
+   name: true
+  modifiers:
+   dropChance: 1.0
+   minAmount: 0.0
+   maxAmount: 0.0
+ stone_pickaxe:
+  template:
+   ==: org.bukkit.inventory.ItemStack
+   type: STONE_PICKAXE
+   amount: 1
+  ignore:
+   amount: true
+   durability: true
+   enchants: true
+   otherEnchants: true
+   enchantsLvl: true
+   lore: true
+   name: true
+  modifiers:
+   dropChance: 1.0
+   minAmount: 0.0
+   maxAmount: 0.0
+ diamond_pickaxe:
+  template:
+   ==: org.bukkit.inventory.ItemStack
+   type: DIAMOND_PICKAXE
+   amount: 1
+  ignore:
+   amount: true
+   durability: true
+   enchants: true
+   otherEnchants: true
+   enchantsLvl: true
+   lore: true
+   name: true
+  modifiers:
+   dropChance: 1.0
+   minAmount: 0.0
+   maxAmount: 0.0
+blocks:
+ stone:
+   material: STONE
+   allTypes: true
+   validTransforms:
+     cobblestone:
+       material: COBBLESTONE
+       allTypes: true
+     dirt:
+       material: DIRT
+       allTypes: false
+       types:
+        - 0
+   dropMultiple: false
+   #Define any veins that should attempt to spawn from this block
+   #Veins will be checked before any other drops
+   veins:
+     - diamond_vein
+   #Here define loot configs by their names
+   #This can be a mix of drop configs and transform configs so name them uniquely!
+   drops:
+     - diamond_ore_drop
+#These are loot configs for items that should spawn when blocks are broken
+#They will spawn the configured item as an item entity
+drops:
+ diamond_ore_drop:
+   package:
+    - ==: org.bukkit.inventory.ItemStack
+      type: DIAMOND_ORE
+      amount: 1
+   tools:
+    - anything
+   minY: 1
+   maxY: 16
+   #If this drop is going to be used for a vein, you probably want this to be 1
+   #That way if the vein decides to drop an ore, HiddenOre always will
+   chance: 1.0
+   minAmount: 1
+   maxAmount: 1
+   dropIfTransformFails: false
+#These are loot configs for blocks that should spawn when blocks are broken
+#They will transform the blocks around the broken block into the "drop"
+#You can configure a drop config to use if the transform fails
+transform:
+ diamond_ore_transform:
+   package:
+    - ==: org.bukkit.inventory.ItemStack
+      type: DIAMOND_ORE
+      amount: 1
+   tools:
+    - anything
+   minY: 1
+   maxY: 16
+   #If this drop is going to be used for a vein, you probably want this to be 1
+   #That way if the vein decides to drop an ore, HiddenOre always will
+   chance: 1.0
+   minAmount: 1
+   maxAmount: 1
+   dropIfTransformFails: true
+   maxDropsIfTransformFails: 1
+   #What drop config should we use if transform fails
+   failConfig: drop_diamond_ore
+veins:
+ diamond_vein:
+   #used for generator, should be different for each vein
+   densitySeed: 87439857
+   heightSeed: 4587346
+   #ore chance multiplier
+   density: 0.5
+   #max thickness of the vein
+   maxSpan: 3
+   #applied to the result of the noise function which will be between -1 and 1
+   #added before density is applied
+   #e.g. 0.0 will result in 50% ore coverage, -0.5 25%, -1 0%, 1 100%
+   densityBonus: -0.6
+   #the average height of the veins
+   areaHeight: 10
+   #maximum random difference from the average
+   areaSpan: 10
+   #distance in blocks between height slope change
+   heightLength: 10
+   #distance in blocks between density slope change
+   #larger number is wider veins, smaller number is more narrow
+   densityLength: 130
+   loots:
+     - diamond_ore_transform

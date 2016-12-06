@@ -1,12 +1,13 @@
 package com.github.devotedmc.hiddenore;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 
+import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.inventory.ItemStack;
 
@@ -16,20 +17,20 @@ public class BlockConfig {
 	public Collection<MaterialWrapper> validGenTypes;
 	public boolean dropMultiple;
 	public boolean suppressDrops;
-	private Map<String, DropConfig> dropConfigs;
-	private String prefix;
-
-	public BlockConfig(String material, boolean dropMultiple, boolean suppressDrops, String prefix, Collection<MaterialWrapper> validGenTypes) {
-		this(material, null, dropMultiple, suppressDrops, prefix, validGenTypes);
+	private List<String> loots;
+	private List<String> veins;
+	
+	public BlockConfig(String material, boolean dropMultiple, boolean suppressDrops, Collection<MaterialWrapper> validGenTypes) {
+		this(material, null, dropMultiple, suppressDrops, validGenTypes);
 	}
 
-	public BlockConfig(String material, Collection<Byte> subtype, boolean dropMultiple, boolean suppressDrops, String prefix, Collection<MaterialWrapper> validGenTypes) {
+	public BlockConfig(String material, Collection<Byte> subtype, boolean dropMultiple, boolean suppressDrops, Collection<MaterialWrapper> validGenTypes) {
 		this.material = material;
 		this.subtypes = (subtype != null) ? new HashSet<Byte>(subtype) : new HashSet<Byte>();
 		this.dropMultiple = dropMultiple;
 		this.suppressDrops = suppressDrops;
-		this.dropConfigs = new HashMap<String, DropConfig>();
-		this.prefix = prefix;
+		this.loots = new LinkedList<String>();
+		this.veins = new LinkedList<String>();
 		this.validGenTypes = validGenTypes;
 	}
 
@@ -64,63 +65,62 @@ public class BlockConfig {
 		return false;
 	}
 
-	public String getPrefix(String drop) {
-		if (drop == null) return prefix;
-		DropConfig dc = dropConfigs.get(drop);
-		return (dc == null || dc.prefix == null) ? prefix : dc.prefix;
+	public void addLootConfigs(List<String> loots) {
+		this.loots.addAll(loots);
 	}
-
-	public boolean hasCustomPrefix(String drop) {
-		if (drop == null) return false;
-		DropConfig dc = dropConfigs.get(drop);
-		return (dc == null || dc.prefix == null) ? (prefix != null) : true;
+	
+	public void addVeinConfigs(List<String> veins) {
+		this.veins.addAll(veins);
 	}
-
-	public void addDropConfig(String drop, DropConfig dropConfig) {
-		dropConfigs.put(drop, dropConfig);
+	
+	public List<String> getLoots() {
+		return loots;
 	}
-
-	public Set<String> getDrops() {
-		return dropConfigs.keySet();
-	}
-
-	public DropConfig getDropConfig(String drop) {
-		return dropConfigs.get(drop);
-	}
-
-	public String getDropConfig(double dice, String biome, ItemStack tool, int blockY) {
-		// accrue possible drops based on biome / tool
-		// check dice against stacked probabilities
-
+	
+	public LootConfig getLootConfig(double dice, String biome, ItemStack tool, Location loc) {
 		double cumChance = 0.0d;
 		double localChance = 0.0d;
 		int counted = 0;
-
-		for (Map.Entry<String, DropConfig> dc : dropConfigs.entrySet()) {
-			if (dc.getValue().dropsWithTool(biome, tool) && blockY <= dc.getValue().getMaxY(biome)
-					&& blockY >= dc.getValue().getMinY(biome)) {
-				
-				ToolConfig tc = dc.getValue().dropsWithToolConfig(biome, tool);
-				localChance = dc.getValue().getChance(biome) * (tc == null ? 1.0 : tc.getDropChanceModifier());
-				
-				/*DIAGNOSTICS*HiddenOre.getPlugin().getLogger()
-						.log(Level.INFO, "Base chance {0}| tool mod {1}| totalChance {2}| tc {3}",
-						new Object[] {Double.toString(dc.getValue().getChance(biome)),
-								Double.toString(tc == null ? 1.0 : tc.getDropChanceModifier()),
-								localChance, (tc == null ? null : tc.toString())});*/
-				
-				if (dice >= cumChance && dice < cumChance + localChance) {
-					return dc.getKey();
+		for(String vName : veins) {
+			VeinConfig vein = Config.getVein(vName);
+			if(vein == null) continue;
+			if(Config.isDebug()) {
+				HiddenOre.getPlugin().getLogger().log(Level.INFO, "Finding loot in vein: {0}", vName);
+			}
+			for(String lName : vein.getLoots()) {
+				LootConfig loot = Config.getLoot(lName);
+				if(loot == null) continue;
+				if(loot.dropsWithTool(biome, tool) && loc.getBlockY() <= loot.getMaxY(biome)
+					&& loc.getBlockY() >= loot.getMinY(biome)) {
+					ToolConfig tc = loot.dropsWithToolConfig(biome, tool);
+					localChance = loot.getChance(biome) * (tc == null ? 1.0 : tc.getDropChanceModifier());
+					localChance *= vein.getOreChance(loc);
+					if(dice >= cumChance && dice < cumChance + localChance) {
+						return loot;
+					}
+					cumChance += localChance;
+					counted++;
+				}
+			}
+		}
+		for(String lName : loots) {
+			LootConfig loot = Config.getLoot(lName);
+			if(loot == null) continue;
+			if(loot.dropsWithTool(biome, tool) && loc.getBlockY() <= loot.getMaxY(biome)
+				&& loc.getBlockY() >= loot.getMinY(biome)) {
+				ToolConfig tc = loot.dropsWithToolConfig(biome, tool);
+				localChance = loot.getChance(biome) * (tc == null ? 1.0 : tc.getDropChanceModifier());
+				if(dice >= cumChance && dice < cumChance + localChance) {
+					return loot;
 				}
 				cumChance += localChance;
 				counted++;
 			}
 		}
-		if (Config.isDebug) {
+		if(Config.isDebug()) {
 			HiddenOre.getPlugin().getLogger()
 					.log(Level.INFO, "{0} tested {1} cumm {2} dice", new Object[] {counted, Double.toString(cumChance), Double.toString(dice)});
 		}
-
 		return null;
 	}
 	
