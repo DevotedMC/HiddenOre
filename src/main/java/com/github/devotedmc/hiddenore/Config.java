@@ -20,10 +20,10 @@ public final class Config {
 	private static boolean alertUser = false;
 	private static boolean listDrops = false;
 	private static boolean ignoreSilktouch = false;
-	private static Map<String, List<BlockConfig>> blockConfigs = new HashMap<String, List<BlockConfig>>();;
-	private static Map<String, LootConfig> lootConfigs = new HashMap<String, LootConfig>();
-	private static Map<String, VeinConfig> veinConfigs = new HashMap<String, VeinConfig>();
-	private static Map<String, NameConfig> prettyNames = new HashMap<String, NameConfig>();
+	private static Map<String, List<BlockConfig>> blockConfigs;
+	private static Map<String, LootConfig> lootConfigs;
+	private static Map<String, VeinConfig> veinConfigs;
+	private static Map<String, NameConfig> prettyNames;
 
 	private static FileConfiguration file;
 
@@ -43,6 +43,10 @@ public final class Config {
 	}
 
 	public static void doLoad() {
+		blockConfigs = new HashMap<String, List<BlockConfig>>();
+		lootConfigs = new HashMap<String, LootConfig>();
+		veinConfigs = new HashMap<String, VeinConfig>();
+		prettyNames = new HashMap<String, NameConfig>();
 		isDebug = file.getBoolean("debug", isDebug);
 		simulateTrueOre = file.getBoolean("true_ore", simulateTrueOre);
 
