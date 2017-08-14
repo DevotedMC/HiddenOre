@@ -6,6 +6,7 @@ authors: [ProgrammerDan]
 load: STARTUP
 website: https://www.github.com/DevotedMC/HiddenOre
 description: HiddenOre allows the complete disguising of ores from players by not generating them in the first place, instead using a probability model to generate configurable ore layouts in response to player mining.
+softdepend: [Multiverse-Core]
 commands:
    hiddenore:
       description: HiddenOre allows the hiding of cool drops underground. This reloads the config.

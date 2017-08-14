@@ -1,16 +1,17 @@
 package com.github.devotedmc.hiddenore;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-
+import org.bukkit.World;
+import org.bukkit.WorldCreator;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
+
+import java.io.File;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.*;
+import java.util.logging.Level;
 
 public final class Config {
 
@@ -25,15 +26,18 @@ public final class Config {
 	public Map<String, NameConfig> prettyNames;
 	public Map<String, PlayerStateConfig> stateMasterList;
 
-	private static FileConfiguration file;
+	private static Map<String, FileConfiguration> configurations;
+	private static FileConfiguration mainConfig;
 
 	private static String trackFileName;
 	private static File trackFile;
 	public static long trackSave;
-	
+
 	public int transformAttemptMultiplier = 3;
-	
+
 	public static boolean caveOres = false;
+
+	public static String worldName;
 
 	private Config() {
 		blockConfigs = new HashMap<String, List<BlockConfig>>();
@@ -47,24 +51,51 @@ public final class Config {
 		ignoreSilktouch = false;
 		defaultPrefix = "You found hidden ore!";
 		transformAttemptMultiplier = 3;
+		configurations = new HashMap<String, FileConfiguration>();
 	}
 
 	public static void loadConfig() {
 		try {
-			file = HiddenOre.getPlugin().getConfig();
-			doLoad();
+			mainConfig = HiddenOre.getPlugin().getConfig();
+			doLoadMainConfig(mainConfig);
+			for (World world : HiddenOre.getPlugin().getServer().getWorlds()) {
+				if(world == null) {
+					WorldCreator wc = new WorldCreator(world.getName());
+					HiddenOre.getPlugin().getServer().createWorld(wc);
+				}
+				Reader reader = new InputStreamReader(HiddenOre.getPlugin().getResource("default-world.yml"));
+				File saveFile = new File(HiddenOre.getPlugin().getDataFolder(), String.format("%s-config.yml", world.getName()));
+				File defaultWorldFile = new File(HiddenOre.getPlugin().getDataFolder(), "default-world.yml");
+				configurations.put(world.getName(), YamlConfiguration.loadConfiguration(reader));
+				if (saveFile.exists()) {
+					configurations.get(world.getName()).load(saveFile);
+				} else {
+					HiddenOre.getPlugin().saveResource("default-world.yml", false);
+					if (defaultWorldFile.exists()) {
+						defaultWorldFile.renameTo(saveFile);
+						configurations.get(world.getName()).set("world_name", world.getName());
+						configurations.get(world.getName()).save(saveFile);
+					}
+					else {
+						HiddenOre.getPlugin().getLogger().warning(String.format("A YAML file could not be created for the world named %s.", world.getName()));
+					}
+				}
+				doLoadWorldConfig(configurations.get(world.getName()));
+			}
+
 		} catch (Exception e) {
-			HiddenOre.getPlugin().getLogger().log(Level.WARNING, "An error occured while loading config!", e);
+			HiddenOre.getPlugin().getLogger().log(Level.WARNING, "An error occurred while loading config!", e);
 		}
 	}
 
-	public static void doLoad() {
+	public static void doLoadMainConfig(FileConfiguration file) {
 		Config i = new Config();
 
 		isDebug = file.getBoolean("debug", isDebug);
 		caveOres = file.getBoolean("caveOres", caveOres);
-
-		trackFileName = file.getString("track_file", trackFileName);
+		if (file.isSet("track_file")) {
+			trackFileName = file.getString("track_file", trackFileName);
+		}
 		trackFile = new File(HiddenOre.getPlugin().getDataFolder(), trackFileName);
 		trackSave = file.getLong("track_save_ticks", trackSave);
 
@@ -74,6 +105,13 @@ public final class Config {
 		i.listDrops = file.getBoolean("list_drops", i.listDrops);
 		i.defaultPrefix = file.getString("prefix", i.defaultPrefix);
 		i.transformAttemptMultiplier = file.getInt("transform_attempt_multiplier", i.transformAttemptMultiplier);
+
+	}
+
+	public static void doLoadWorldConfig(FileConfiguration file) {
+		Config i = new Config();
+
+		worldName = file.getString("world_name");
 
 		ConfigurationSection prettyNames = file.getConfigurationSection("pretty_names");
 		if (prettyNames != null) {
@@ -108,7 +146,7 @@ public final class Config {
 		} else {
 			HiddenOre.getPlugin().getLogger().info("No Pretty Names specified.");
 		}
-		
+
 		ConfigurationSection tools = file.getConfigurationSection("tools");
 		if (tools != null) {
 			for (String key : tools.getKeys(false)) {
@@ -120,7 +158,7 @@ public final class Config {
 		} else {
 			HiddenOre.getPlugin().getLogger().info("No tool configurations specified. This might cause issues.");
 		}
-		
+
 		ConfigurationSection states = file.getConfigurationSection("states");
 		if (states != null) {
 			for (String state : states.getKeys(false)) {
@@ -133,7 +171,7 @@ public final class Config {
 					if (stateConfig.contains("fatigue" )) {
 						pstateConfig.fatigueRates = stateConfig.getDoubleList("fatigue");
 					}
-					if (stateConfig.contains("nausea")) { 
+					if (stateConfig.contains("nausea")) {
 						pstateConfig.nauseaRates = stateConfig.getDoubleList("nausea");
 					}
 					if (stateConfig.contains("luck")) {
@@ -166,7 +204,7 @@ public final class Config {
 				Boolean cMultiple = block.getBoolean("dropMultiple", false);
 				Boolean cSuppress = block.getBoolean("suppressDrops", false);
 				List<Byte> subtypes = (block.getBoolean("allTypes", true)) ? null : block.getByteList("types");
-				
+
 				// add what blocks should be transformed, if transformation is used.
 				ConfigurationSection validTransforms = block.getConfigurationSection("validTransforms");
 				List<BlockConfig.MaterialWrapper> transformThese = new ArrayList<BlockConfig.MaterialWrapper>();
@@ -194,9 +232,9 @@ public final class Config {
 					boolean transformDropIfFails = drop.getBoolean("transformDropIfFails", false);
 					int transformMaxDropsIfFails = drop.getInt("transformMaxDropsIfFails", 1);
 
-					DropConfig dc = new DropConfig(sourceDrop, DropItemConfig.transform(items), 
-							transformIfAble, transformDropIfFails, transformMaxDropsIfFails,
-							dPrefix, grabLimits(drop, new DropLimitsConfig()));
+					DropConfig dc = new DropConfig(sourceDrop, DropItemConfig.transform(items),
+						transformIfAble, transformDropIfFails, transformMaxDropsIfFails,
+						dPrefix, grabLimits(drop, new DropLimitsConfig()));
 
 					ConfigurationSection biomes = drop.getConfigurationSection("biomes");
 					if (biomes != null) {
@@ -238,7 +276,7 @@ public final class Config {
 		}
 		dlc.minY = drop.getInt("minY", parent.minY);
 		dlc.maxY = drop.getInt("maxY", parent.maxY);
-		
+
 		// Get xp data as well.
 		ConfigurationSection xp = drop.getConfigurationSection("xp");
 		if (xp != null) {
@@ -254,13 +292,13 @@ public final class Config {
 			}
 			dlc.xp = xpc;
 		}
-		
+
 		String state = drop.isSet("state") ? drop.getString("state", parent.state) : parent.state;
 		dlc.state = state;
-		
+
 		HiddenOre.getPlugin().getLogger()
-				.log(Level.INFO, "   loading drop config {0}% {1}-{2} {3}-{4} with {5} tools and {6} state",
-						new Object[] {dlc.chance*100.0, dlc.minAmount, dlc.maxAmount, dlc.minY, dlc.maxY, dlc.tools.size(), dlc.state});
+			.log(Level.INFO, "   loading drop config {0}% {1}-{2} {3}-{4} with {5} tools and {6} state",
+				new Object[] {dlc.chance*100.0, dlc.minAmount, dlc.maxAmount, dlc.minY, dlc.maxY, dlc.tools.size(), dlc.state});
 		HiddenOre.getPlugin().getLogger().log(Level.INFO, "     tools: {0}", dlc.tools);
 		if (dlc.xp != null) {
 			HiddenOre.getPlugin().getLogger().log(Level.INFO, "     xp: {0}", dlc.xp.toString());
@@ -308,15 +346,15 @@ public final class Config {
 	public static File getTrackFile() {
 		return trackFile;
 	}
-	
+
 	public static int getTransformAttemptMultiplier() {
 		return instance.transformAttemptMultiplier;
 	}
-	
-	public ConfigurationSection getWorldGenerations() {
-		return file.getConfigurationSection("clear_ores");
+
+	public ConfigurationSection getWorldGenerations(String worldName) {
+		return configurations.get(worldName).getConfigurationSection("clear_ores");
 	}
-	
+
 	public static PlayerStateConfig getState(String state) {
 		return instance.stateMasterList.get(state);
 	}
