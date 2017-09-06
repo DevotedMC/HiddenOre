@@ -59,24 +59,18 @@ public final class Config {
 			mainConfig = HiddenOre.getPlugin().getConfig();
 			doLoadMainConfig(mainConfig);
 			for (World world : HiddenOre.getPlugin().getServer().getWorlds()) {
-				if(world == null) {
-					WorldCreator wc = new WorldCreator(world.getName());
-					HiddenOre.getPlugin().getServer().createWorld(wc);
-				}
-				Reader reader = new InputStreamReader(HiddenOre.getPlugin().getResource("default-world.yml"));
 				File saveFile = new File(HiddenOre.getPlugin().getDataFolder(), String.format("%s-config.yml", world.getName()));
-				File defaultWorldFile = new File(HiddenOre.getPlugin().getDataFolder(), "default-world.yml");
-				configurations.put(world.getName(), YamlConfiguration.loadConfiguration(reader));
 				if (saveFile.exists()) {
-					configurations.get(world.getName()).load(saveFile);
-				} else {
-					HiddenOre.getPlugin().saveResource("default-world.yml", false);
-					if (defaultWorldFile.exists()) {
-						defaultWorldFile.renameTo(saveFile);
-						configurations.get(world.getName()).set("world_name", world.getName());
-						configurations.get(world.getName()).save(saveFile);
-					}
-					else {
+					//TODO double check if this is supposed to be the specific config or default-world.yml for the reader. I'm too tired to be able to follow this around in my head right now.
+					Reader worldExistsReader = new InputStreamReader(HiddenOre.getPlugin().getResource(String.format("%s-config.yml", world.getName())));
+					configurations.put(world.getName(), YamlConfiguration.loadConfiguration(worldExistsReader));
+				}else{
+					File defaultWorldFile = new File(HiddenOre.getPlugin().getDataFolder(), "default-world.yml");
+					if(defaultWorldFile.exists()){
+						Reader defaultWorldReader = new InputStreamReader(HiddenOre.getPlugin().getResource("default-world.yml"));
+						configurations.put(world.getName(), YamlConfiguration.loadConfiguration(defaultWorldReader));
+						configurations.get(world.getName()).save(new File(HiddenOre.getPlugin().getDataFolder(), String.format("%s-config.yml")));
+					}else{
 						HiddenOre.getPlugin().getLogger().warning(String.format("A YAML file could not be created for the world named %s.", world.getName()));
 					}
 				}
@@ -93,9 +87,7 @@ public final class Config {
 
 		isDebug = file.getBoolean("debug", isDebug);
 		caveOres = file.getBoolean("caveOres", caveOres);
-		if (file.isSet("track_file")) {
-			trackFileName = file.getString("track_file", trackFileName);
-		}
+		trackFileName = file.getString("track_file", trackFileName);
 		trackFile = new File(HiddenOre.getPlugin().getDataFolder(), trackFileName);
 		trackSave = file.getLong("track_save_ticks", trackSave);
 
@@ -352,7 +344,8 @@ public final class Config {
 	}
 
 	public ConfigurationSection getWorldGenerations(String worldName) {
-		return configurations.get(worldName).getConfigurationSection("clear_ores");
+		Reader defaultWorldReader = new InputStreamReader(HiddenOre.getPlugin().getResource("default-world.yml"));
+		return configurations.getOrDefault(worldName, YamlConfiguration.loadConfiguration(defaultWorldReader)).getConfigurationSection("clear_ores");
 	}
 
 	public static PlayerStateConfig getState(String state) {

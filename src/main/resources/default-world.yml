@@ -1,7 +1,6 @@
 world_name: world
 clear_ores:
-  this_world:
-    replace:
+  replace:
     - IRON_ORE
     - REDSTONE_ORE
     - GLOWING_REDSTONE_ORE

@@ -45,7 +45,11 @@ public class WorldGenerationListener implements Listener {
 	 * @param config The world-specific config.
 	 *
 	 */
-	public WorldGenerationListener(ConfigurationSection config) {
+	
+	//TODO Check if change from ConfigurationSection to FileConfiguration when passed from config.java.
+	public WorldGenerationListener(ConfigurationSection config, String worldName) {
+		
+		this.worldName = worldName;
 		if (config.contains("replace")) {
 			toReplace = new HashSet<Material>();
 			for (String replace : config.getStringList("replace")) {
