@@ -56,6 +56,7 @@ public final class Config {
 
 	public static void loadConfig() {
 		try {
+			//TODO default-world.yml is never generated, but is required to generate per-world configs.
 			mainConfig = HiddenOre.getPlugin().getConfig();
 			doLoadMainConfig(mainConfig);
 			for (World world : HiddenOre.getPlugin().getServer().getWorlds()) {
@@ -64,9 +65,12 @@ public final class Config {
 					//TODO double check if this is supposed to be the specific config or default-world.yml for the reader. I'm too tired to be able to follow this around in my head right now.
 					Reader worldExistsReader = new InputStreamReader(HiddenOre.getPlugin().getResource(String.format("%s-config.yml", world.getName())));
 					configurations.put(world.getName(), YamlConfiguration.loadConfiguration(worldExistsReader));
+					HiddenOre.getPlugin().getLogger().info("Loaded Configs for world " + world.getName());
 				}else{
+					HiddenOre.getPlugin().getLogger().info("Configs do not exist for world " + world.getName() + ", generating them...");
 					File defaultWorldFile = new File(HiddenOre.getPlugin().getDataFolder(), "default-world.yml");
 					if(defaultWorldFile.exists()){
+						//TODO This does not run correctly, throws error "Cannot load configuration from stream ... InvalidConfigurationException"
 						Reader defaultWorldReader = new InputStreamReader(HiddenOre.getPlugin().getResource("default-world.yml"));
 						configurations.put(world.getName(), YamlConfiguration.loadConfiguration(defaultWorldReader));
 						configurations.get(world.getName()).save(new File(HiddenOre.getPlugin().getDataFolder(), String.format("%s-config.yml")));
