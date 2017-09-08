@@ -62,6 +62,7 @@ public final class Config {
 			for (World world : HiddenOre.getPlugin().getServer().getWorlds()) {
 				File saveFile = new File(HiddenOre.getPlugin().getDataFolder(), String.format("%s-config.yml", world.getName()));
 				if (saveFile.exists()) {
+					//TODO pretty sure this whole scope here doesn't work.
 					//TODO double check if this is supposed to be the specific config or default-world.yml for the reader. I'm too tired to be able to follow this around in my head right now.
 					Reader worldExistsReader = new InputStreamReader(HiddenOre.getPlugin().getResource(String.format("%s-config.yml", world.getName())));
 					configurations.put(world.getName(), YamlConfiguration.loadConfiguration(worldExistsReader));
@@ -70,10 +71,9 @@ public final class Config {
 					HiddenOre.getPlugin().getLogger().info("Configs do not exist for world " + world.getName() + ", generating them...");
 					File defaultWorldFile = new File(HiddenOre.getPlugin().getDataFolder(), "default-world.yml");
 					if(defaultWorldFile.exists()){
-						//TODO This does not run correctly, throws error "Cannot load configuration from stream ... InvalidConfigurationException"
 						Reader defaultWorldReader = new InputStreamReader(HiddenOre.getPlugin().getResource("default-world.yml"));
 						configurations.put(world.getName(), YamlConfiguration.loadConfiguration(defaultWorldReader));
-						configurations.get(world.getName()).save(new File(HiddenOre.getPlugin().getDataFolder(), String.format("%s-config.yml")));
+						configurations.get(world.getName()).save(new File(HiddenOre.getPlugin().getDataFolder(), String.format("%s-config.yml", world.getName())));
 					}else{
 						HiddenOre.getPlugin().getLogger().warning(String.format("A YAML file could not be created for the world named %s.", world.getName()));
 					}
