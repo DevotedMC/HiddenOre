@@ -64,8 +64,11 @@ public final class Config {
 				if (saveFile.exists()) {
 					//TODO pretty sure this whole scope here doesn't work.
 					//TODO double check if this is supposed to be the specific config or default-world.yml for the reader. I'm too tired to be able to follow this around in my head right now.
+					HiddenOre.getPlugin().getLogger().info("Loading configs for world " + world.getName());
 					Reader worldExistsReader = new InputStreamReader(HiddenOre.getPlugin().getResource(String.format("%s-config.yml", world.getName())));
 					configurations.put(world.getName(), YamlConfiguration.loadConfiguration(worldExistsReader));
+					//make sure that you put a file there first so it doesnt null pointer or just fix the routing dude
+					//configurations.get(world.getName()).load(saveFile);
 					HiddenOre.getPlugin().getLogger().info("Loaded Configs for world " + world.getName());
 				}else{
 					HiddenOre.getPlugin().getLogger().info("Configs do not exist for world " + world.getName() + ", generating them...");
