@@ -82,8 +82,7 @@ public class BreakTracking {
 			HiddenOre.getPlugin().getLogger().info("Took " + s + "ms to load Break Tracking");
 		}
 		catch(Exception e) {
-			HiddenOre.getPlugin().getLogger().warning("Error enabling break tracking. Stacktrace:");
-			HiddenOre.getPlugin().getLogger().warning(e.getLocalizedMessage());
+			HiddenOre.getPlugin().getLogger().warning("Error enabling break tracking. Stacktrace:" + e.getLocalizedMessage());
 		}
 	}
 

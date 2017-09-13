@@ -1,17 +1,22 @@
 package com.github.devotedmc.hiddenore;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+
 import org.bukkit.World;
-import org.bukkit.WorldCreator;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
-
-import java.io.File;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.util.*;
-import java.util.logging.Level;
 
 public final class Config {
 
@@ -65,8 +70,11 @@ public final class Config {
 					//TODO pretty sure this whole scope here doesn't work.
 					//TODO double check if this is supposed to be the specific config or default-world.yml for the reader. I'm too tired to be able to follow this around in my head right now.
 					HiddenOre.getPlugin().getLogger().info("Loading configs for world " + world.getName());
-					Reader worldExistsReader = new InputStreamReader(HiddenOre.getPlugin().getResource(String.format("%s-config.yml", world.getName())));
-					configurations.put(world.getName(), YamlConfiguration.loadConfiguration(worldExistsReader));
+					try(Reader worldExistsReader = new FileReader(saveFile)){
+						configurations.put(world.getName(), YamlConfiguration.loadConfiguration(worldExistsReader));
+					}catch(IOException ioe){
+						HiddenOre.getPlugin().getLogger().warning(String.format("A YAML file could not be found for the world named %s.", world.getName()));
+					}
 					//make sure that you put a file there first so it doesnt null pointer or just fix the routing dude
 					//configurations.get(world.getName()).load(saveFile);
 					HiddenOre.getPlugin().getLogger().info("Loaded Configs for world " + world.getName());
@@ -74,9 +82,12 @@ public final class Config {
 					HiddenOre.getPlugin().getLogger().info("Configs do not exist for world " + world.getName() + ", generating them...");
 					File defaultWorldFile = new File(HiddenOre.getPlugin().getDataFolder(), "default-world.yml");
 					if(defaultWorldFile.exists()){
-						Reader defaultWorldReader = new InputStreamReader(HiddenOre.getPlugin().getResource("default-world.yml"));
-						configurations.put(world.getName(), YamlConfiguration.loadConfiguration(defaultWorldReader));
-						configurations.get(world.getName()).save(new File(HiddenOre.getPlugin().getDataFolder(), String.format("%s-config.yml", world.getName())));
+						try(Reader defaultWorldReader = new FileReader(defaultWorldFile)){
+							configurations.put(world.getName(), YamlConfiguration.loadConfiguration(defaultWorldReader));
+							configurations.get(world.getName()).save(new File(HiddenOre.getPlugin().getDataFolder(), String.format("%s-config.yml", world.getName())));
+						}catch(IOException ioe){
+							HiddenOre.getPlugin().getLogger().warning(String.format("A YAML file could not be created for the world named %s.", world.getName()));
+						}
 					}else{
 						HiddenOre.getPlugin().getLogger().warning(String.format("A YAML file could not be created for the world named %s.", world.getName()));
 					}
