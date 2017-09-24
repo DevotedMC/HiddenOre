@@ -20,7 +20,7 @@ import org.bukkit.inventory.ItemStack;
 
 public final class Config {
 
-	public static Map<String,Config> instances;
+	//public static Map<String,Config> instances;
 	public static Config defaultInstance;
 	public static boolean isDebug;
 
@@ -46,7 +46,7 @@ public final class Config {
 	public static String worldName;
 
 	private Config() {
-		instances = new HashMap<String, Config>();
+		//instances = new HashMap<String, Config>();
 		blockConfigs = new HashMap<String, List<BlockConfig>>();
 		prettyNames = new HashMap<String, NameConfig>();
 		stateMasterList = new HashMap<String, PlayerStateConfig>();
@@ -71,22 +71,24 @@ public final class Config {
 				File saveFile = new File(HiddenOre.getPlugin().getDataFolder(), String.format("%s-config.yml", world.getName()));
 				if (saveFile.exists()) {
 					HiddenOre.getPlugin().getLogger().warning("Loading configs for world " + world.getName());
-					for(String s : configurations.keySet()){
+					/*for(String s : configurations.keySet()){
 						HiddenOre.getPlugin().getLogger().warning("Configurations: " + s + " : " + configurations.isEmpty());
-					}
+					}*/
 					try(Reader worldExistsReader = new FileReader(saveFile)){
-						configurations.put(world.getName(), YamlConfiguration.loadConfiguration(worldExistsReader));
+						//configurations.put(world.getName(), YamlConfiguration.loadConfiguration(worldExistsReader));
+						doLoadWorldConfig(YamlConfiguration.loadConfiguration(worldExistsReader), world.getName());
+						HiddenOre.getPlugin().getLogger().info("Loaded Configs for world " + world.getName());
 					}catch(IOException ioe){
 						HiddenOre.getPlugin().getLogger().warning(String.format("A YAML file could not be found for the world named %s.", world.getName()));
 					}
-					HiddenOre.getPlugin().getLogger().info("Loaded Configs for world " + world.getName());
 				}else{
 					HiddenOre.getPlugin().getLogger().info("Configs do not exist for world " + world.getName() + ", generating them...");
 					File defaultWorldFile = new File(HiddenOre.getPlugin().getDataFolder(), "default-world.yml");
 					if(defaultWorldFile.exists()){
 						try(Reader defaultWorldReader = new FileReader(defaultWorldFile)){
-							configurations.put(world.getName(), YamlConfiguration.loadConfiguration(defaultWorldReader));
-							configurations.get(world.getName()).save(new File(HiddenOre.getPlugin().getDataFolder(), String.format("%s-config.yml", world.getName())));
+							//configurations.put(world.getName(), YamlConfiguration.loadConfiguration(defaultWorldReader));
+							//configurations.get(world.getName()).save(new File(HiddenOre.getPlugin().getDataFolder(), String.format("%s-config.yml", world.getName())));
+							doLoadWorldConfig(YamlConfiguration.loadConfiguration(defaultWorldReader), world.getName());
 						}catch(IOException ioe){
 							HiddenOre.getPlugin().getLogger().warning(String.format("A YAML file could not be created for the world named %s.", world.getName()));
 						}
@@ -94,14 +96,15 @@ public final class Config {
 						HiddenOre.getPlugin().getLogger().warning(String.format("A YAML file could not be created for the world named %s.", world.getName()));
 					}
 				}
-				doLoadWorldConfig(configurations.get(world.getName()), world.getName());
+				//doLoadWorldConfig(configurations.get(world.getName()), world.getName());
 			}
 
 		} catch (Exception e) {
 			HiddenOre.getPlugin().getLogger().log(Level.WARNING, "An error occurred while loading config!", e);
 		}
 		
-		for(String s : instances.keySet()){
+		HiddenOre.getPlugin().getLogger().log(Level.WARNING, "Worlds: " + HiddenOre.instances.size() + HiddenOre.instances.keySet());
+		for(String s : HiddenOre.instances.keySet()){
 			HiddenOre.getPlugin().getLogger().log(Level.WARNING, "Loaded configs for world: " + s);
 		}
 		
@@ -132,6 +135,7 @@ public final class Config {
 	}
 
 	public static void doLoadWorldConfig(FileConfiguration file, String worldName) {
+		HiddenOre.getPlugin().getLogger().log(Level.WARNING, "Loading world config via doLoadWorldConfig for " + worldName);
 		Config i = new Config();
 		ConfigurationSection prettyNames = file.getConfigurationSection("pretty_names");
 		if (prettyNames != null) {
@@ -278,8 +282,9 @@ public final class Config {
 		} else {
 			HiddenOre.getPlugin().getLogger().info("No blocks specified (Why are you using this plugin?)");
 		}
-
-		instances.put(worldName, i);
+		HiddenOre.getPlugin().getLogger().info("Putting " + worldName + "into instances");
+		HiddenOre.instances.put(worldName, i);
+		HiddenOre.getPlugin().getLogger().warning("Instances + " + HiddenOre.instances.size() + HiddenOre.instances.keySet());
 	}
 
 	private static DropLimitsConfig grabLimits(ConfigurationSection drop, DropLimitsConfig parent) {
@@ -327,7 +332,7 @@ public final class Config {
 	}
 
 	public static BlockConfig isDropBlock(String block, byte subtype, String worldName) {
-		Config i = instances.get(worldName);
+		Config i = HiddenOre.instances.get(worldName);
 		HiddenOre.getPlugin().getLogger().info("Getting isDropBlock for world " + worldName);
 		
 		if(i != null){
