@@ -70,7 +70,7 @@ public class BlockBreakListener implements Listener {
 		String blockName = b.getType().name();
 		Byte sb = b.getData();
 
-		BlockConfig bc = Config.isDropBlock(blockName, sb);
+		BlockConfig bc = Config.isDropBlock(blockName, sb, b.getWorld().getName());
 
 		Player p = event.getPlayer();
 		
@@ -104,14 +104,14 @@ public class BlockBreakListener implements Listener {
 		ItemStack inMainHand = p.getInventory().getItemInMainHand();
 		
 		// Check SilkTouch failfast, if configured.
-		if (!Config.instance.ignoreSilktouch && inMainHand != null && inMainHand.hasItemMeta() && 
+		if (!Config.defaultInstance.ignoreSilktouch && inMainHand != null && inMainHand.hasItemMeta() && 
 				inMainHand.getEnchantments() != null && inMainHand.getEnchantments().containsKey(Enchantment.SILK_TOUCH)) {
 			return;
 		}
 
 		boolean hasDrop = false;
 
-		StringBuffer alertUser = new StringBuffer().append(Config.instance.defaultPrefix);
+		StringBuffer alertUser = new StringBuffer().append(Config.defaultInstance.defaultPrefix);
 
 		String biomeName = b.getBiome().name();
 

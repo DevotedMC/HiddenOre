@@ -54,15 +54,21 @@ public class HiddenOre extends JavaPlugin {
 		this.getCommand("hiddenore").setExecutor(commandHandler);
 
 		worldGen = new ArrayList<WorldGenerationListener>();
-		for (World world : getServer().getWorlds()) {
-			ConfigurationSection worldGenConfig = Config.instance.getWorldGenerations(world.getName());
+		
+		//This is done before the the list of instances is made.
+	/*	for (World world : getServer().getWorlds()) {
+			Config i = Config.instances.get(world.getName());
+			if(i == null){
+				this.getLogger().log(Level.WARNING, "Config i is null you fucking retard");
+			}
+			ConfigurationSection worldGenConfig = i.getWorldGenerations(world.getName());
 			if (worldGenConfig != null) {
 				this.getLogger().log(Level.INFO, "Registered Ore Generation Suppression Listener for World {0}", world.getName());
 				WorldGenerationListener list = new WorldGenerationListener(worldGenConfig, world.getName());
 				this.getServer().getPluginManager().registerEvents(list, this);
 				worldGen.add(list);
 			}
-		}
+		}*/
 	}
 
 	@Override

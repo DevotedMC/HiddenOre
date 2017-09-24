@@ -148,7 +148,7 @@ public class WorldGenerationListener implements Listener {
 			for(int z = 0; z < 16; z++) {
 				for(int y = 0; y < chunk.getWorld().getMaxHeight(); y++) {
 					Block block = chunk.getBlock(x, y, z);
-					BlockConfig bc = Config.isDropBlock(block.getType().name(), block.getData());
+					BlockConfig bc = Config.isDropBlock(block.getType().name(), block.getData(), block.getWorld().getName());
 					if(bc == null) continue;
 					for(BlockFace face : faces) {
 						if(block.getRelative(face).getType() == Material.AIR) {

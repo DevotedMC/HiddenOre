@@ -20,7 +20,8 @@ import org.bukkit.inventory.ItemStack;
 
 public final class Config {
 
-	public static Config instance;
+	public static Map<String,Config> instances;
+	public static Config defaultInstance;
 	public static boolean isDebug;
 
 	public String defaultPrefix;
@@ -45,6 +46,7 @@ public final class Config {
 	public static String worldName;
 
 	private Config() {
+		instances = new HashMap<String, Config>();
 		blockConfigs = new HashMap<String, List<BlockConfig>>();
 		prettyNames = new HashMap<String, NameConfig>();
 		stateMasterList = new HashMap<String, PlayerStateConfig>();
@@ -62,21 +64,21 @@ public final class Config {
 	public static void loadConfig() {
 		try {
 			//TODO default-world.yml is never generated, but is required to generate per-world configs.
+			//TODO The correct drops are loaded per world, HOWEVER, only the last world is put into map *instances*
 			mainConfig = HiddenOre.getPlugin().getConfig();
 			doLoadMainConfig(mainConfig);
 			for (World world : HiddenOre.getPlugin().getServer().getWorlds()) {
 				File saveFile = new File(HiddenOre.getPlugin().getDataFolder(), String.format("%s-config.yml", world.getName()));
 				if (saveFile.exists()) {
-					//TODO pretty sure this whole scope here doesn't work.
-					//TODO double check if this is supposed to be the specific config or default-world.yml for the reader. I'm too tired to be able to follow this around in my head right now.
-					HiddenOre.getPlugin().getLogger().info("Loading configs for world " + world.getName());
+					HiddenOre.getPlugin().getLogger().warning("Loading configs for world " + world.getName());
+					for(String s : configurations.keySet()){
+						HiddenOre.getPlugin().getLogger().warning("Configurations: " + s + " : " + configurations.isEmpty());
+					}
 					try(Reader worldExistsReader = new FileReader(saveFile)){
 						configurations.put(world.getName(), YamlConfiguration.loadConfiguration(worldExistsReader));
 					}catch(IOException ioe){
 						HiddenOre.getPlugin().getLogger().warning(String.format("A YAML file could not be found for the world named %s.", world.getName()));
 					}
-					//make sure that you put a file there first so it doesnt null pointer or just fix the routing dude
-					//configurations.get(world.getName()).load(saveFile);
 					HiddenOre.getPlugin().getLogger().info("Loaded Configs for world " + world.getName());
 				}else{
 					HiddenOre.getPlugin().getLogger().info("Configs do not exist for world " + world.getName() + ", generating them...");
@@ -92,15 +94,25 @@ public final class Config {
 						HiddenOre.getPlugin().getLogger().warning(String.format("A YAML file could not be created for the world named %s.", world.getName()));
 					}
 				}
-				doLoadWorldConfig(configurations.get(world.getName()));
+				doLoadWorldConfig(configurations.get(world.getName()), world.getName());
 			}
 
 		} catch (Exception e) {
 			HiddenOre.getPlugin().getLogger().log(Level.WARNING, "An error occurred while loading config!", e);
 		}
+		
+		for(String s : instances.keySet()){
+			HiddenOre.getPlugin().getLogger().log(Level.WARNING, "Loaded configs for world: " + s);
+		}
+		
+		HiddenOre.getPlugin().getLogger().warning("Configsuratiosn" + configurations.isEmpty());
+		for(String s : configurations.keySet()){
+			HiddenOre.getPlugin().getLogger().warning("Configurations: " + s + " : " + configurations.isEmpty());
+		}
 	}
 
 	public static void doLoadMainConfig(FileConfiguration file) {
+		
 		Config i = new Config();
 
 		isDebug = file.getBoolean("debug", isDebug);
@@ -115,14 +127,12 @@ public final class Config {
 		i.listDrops = file.getBoolean("list_drops", i.listDrops);
 		i.defaultPrefix = file.getString("prefix", i.defaultPrefix);
 		i.transformAttemptMultiplier = file.getInt("transform_attempt_multiplier", i.transformAttemptMultiplier);
-
+		
+		defaultInstance = i;
 	}
 
-	public static void doLoadWorldConfig(FileConfiguration file) {
+	public static void doLoadWorldConfig(FileConfiguration file, String worldName) {
 		Config i = new Config();
-
-		worldName = file.getString("world_name");
-
 		ConfigurationSection prettyNames = file.getConfigurationSection("pretty_names");
 		if (prettyNames != null) {
 			for (String key : prettyNames.getKeys(false)) {
@@ -269,7 +279,7 @@ public final class Config {
 			HiddenOre.getPlugin().getLogger().info("No blocks specified (Why are you using this plugin?)");
 		}
 
-		instance = i;
+		instances.put(worldName, i);
 	}
 
 	private static DropLimitsConfig grabLimits(ConfigurationSection drop, DropLimitsConfig parent) {
@@ -316,39 +326,45 @@ public final class Config {
 		return dlc;
 	}
 
-	public static BlockConfig isDropBlock(String block, byte subtype) {
-		List<BlockConfig> bcs = instance.blockConfigs.get(block);
-		if (bcs != null && bcs.size() > 0) {
-			// return first match
-			for (BlockConfig bc : bcs) {
-				if (bc.checkSubType(subtype)) {
-					return bc;
+	public static BlockConfig isDropBlock(String block, byte subtype, String worldName) {
+		Config i = instances.get(worldName);
+		HiddenOre.getPlugin().getLogger().info("Getting isDropBlock for world " + worldName);
+		
+		if(i != null){
+			HiddenOre.getPlugin().getLogger().info("i != null");
+			List<BlockConfig> bcs = i.blockConfigs.get(block);
+			if (bcs != null && bcs.size() > 0) {
+				// return first match
+				for (BlockConfig bc : bcs) {
+					if (bc.checkSubType(subtype)) {
+						return bc;
+					}
 				}
 			}
 		}
 		return null;
 	}
 
-	public static String getPrefix(String block, byte subtype, String drop) {
-		BlockConfig bc = isDropBlock(block, subtype);
-		String pref = (bc == null) ? instance.defaultPrefix : bc.getPrefix(drop);
-		return (pref == null ? instance.defaultPrefix : pref);
+	public static String getPrefix(String block, byte subtype, String drop, String worldName) {
+		BlockConfig bc = isDropBlock(block, subtype, worldName);
+		String pref = (bc == null) ? defaultInstance.defaultPrefix : bc.getPrefix(drop);
+		return (pref == null ? defaultInstance.defaultPrefix : pref);
 	}
 
 	public static String getPrefix() {
-		return instance.defaultPrefix;
+		return defaultInstance.defaultPrefix;
 	}
 
 	public static boolean isAlertUser() {
-		return instance.alertUser;
+		return defaultInstance.alertUser;
 	}
 
 	public static boolean isListDrops() {
-		return instance.listDrops;
+		return defaultInstance.listDrops;
 	}
 
 	public static String getPrettyName(String name, short durability) {
-		NameConfig nc = instance.prettyNames.get(name);
+		NameConfig nc = defaultInstance.prettyNames.get(name);
 		String pref = (nc == null) ? name : nc.getSubTypePrettyName(durability);
 		return (pref == null) ? name : pref;
 	}
@@ -358,7 +374,7 @@ public final class Config {
 	}
 
 	public static int getTransformAttemptMultiplier() {
-		return instance.transformAttemptMultiplier;
+		return defaultInstance.transformAttemptMultiplier;
 	}
 
 	public ConfigurationSection getWorldGenerations(String worldName) {
@@ -367,6 +383,6 @@ public final class Config {
 	}
 
 	public static PlayerStateConfig getState(String state) {
-		return instance.stateMasterList.get(state);
+		return defaultInstance.stateMasterList.get(state);
 	}
 }
