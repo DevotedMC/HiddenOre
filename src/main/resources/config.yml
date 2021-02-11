@@ -167,7 +167,7 @@ drops:
   minY: 1
   maxY: 255
   chance: 0.0001
-  command: '/give %player% iron_ingot 1'
+  command: 'give %player% iron_ingot 1'
   # You can specify tool and biome, and state modifiers like any other drop.
   tools:
    - wood_pickaxe
