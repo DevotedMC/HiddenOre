@@ -1,6 +1,7 @@
 package com.github.devotedmc.hiddenore;
 
 import java.util.List;
+import java.util.Map;
 
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
@@ -35,6 +36,7 @@ public class PlayerStateConfig {
 	public List<Double> luckRates;
 	public List<Double> blindnessRates;
 	public List<Double> badluckRates;
+	public List<Map.Entry<String, Double>> permRates;
 	
 	/**
 	 * All states are applied successively
@@ -69,6 +71,13 @@ public class PlayerStateConfig {
 			} else if (effect.getType().equals(PotionEffectType.UNLUCK)) { // unluck
 				if (badluckRates != null && idx < badluckRates.size()) {
 					presentRate *= badluckRates.get(idx);
+				}
+			}
+		}
+		if (permRates != null) {
+			for (Map.Entry<String, Double> ent : permRates) {
+				if (player.hasPermission(ent.getKey())) {
+					presentRate *= ent.getValue();
 				}
 			}
 		}

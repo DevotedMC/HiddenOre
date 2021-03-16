@@ -26,7 +26,7 @@ clear_ores:
   with: STONE
  end_world:
   world: world_nether
-  replace: 
+  replace:
   - NETHER_QUARTZ_ORE
   with: NETHERRACK
 tools:
@@ -43,7 +43,7 @@ tools:
    maxAmount: 0.0
  # Give the item a "friendly name" that you'll use in the "tools" section of each drop config.
  wood_pickaxe:
-  # Open an issue if the config-advanced.yml data doesn't give you enough to go on to 
+  # Open an issue if the config-advanced.yml data doesn't give you enough to go on to
   #  design the template of your desire.
   template:
    ==: org.bukkit.inventory.ItemStack
@@ -146,6 +146,7 @@ tools:
    maxAmount: 0.0
 states:
 # These allow modification of drop chance based on the player's state
+# Drops must be assigned a state for the effects to take effect.
  hasteDebuff:
  # Give each "set" of modifications a name
   haste: [0.8, 0.5]
@@ -161,6 +162,12 @@ states:
   luck: [2.0, 3.0, 4.0]
   badluck: [0.1, 0.01, 0.002]
   blindness: [0.0, 0.0, 0.0]
+ permsState:
+   # Define permission based modifiers in the state's permissions section.
+   # Each permission requires both a permission and a modifier.
+   permissions:
+     - permission: exampleperm.givemeloot
+       modifier: 10.0
 drops:
  # As of 1.3.2, you can now specify a command to run instead of (or in addition to) drops.
  fancy_cmd:
@@ -202,7 +209,7 @@ drops:
   maxAmount: 8
   # Instead of dropping the package, attempts to transform nearby blocks of the same type as triggered this
   # drop into the package. If portions of the drop can't be transformed, they are still just dropped.
-  # Default is false. 
+  # Default is false.
   transformIfAble: true
   # If for some reason transformation can't find a place to do its magic, should we use normal drop behavior?
   # Default is false.
@@ -371,7 +378,7 @@ blocks:
     material: ANDESITE
    diorite:
     material: DIORITE
-   granite: 
+   granite:
     material: GRANITE
   validTransforms:
     cobblestone:

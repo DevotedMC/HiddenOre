@@ -6,8 +6,10 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -168,6 +170,35 @@ public final class Config {
 					}
 					if (stateConfig.contains("badluck")) {
 						pstateConfig.badluckRates = stateConfig.getDoubleList("badluck");
+					}
+					if (stateConfig.contains("permissions")) {
+						List<Map<?, ?>> rawPermListMap = stateConfig.getMapList("permissions");
+						if (rawPermListMap.isEmpty()) {
+							HiddenOre.getPlugin().getLogger().log(Level.WARNING, "Permissions section in ''{0}'' is either empty or not a list-of-maps", state);
+						} else {
+							TreeMap<String, Double> map = new TreeMap<>();
+							for (Map permMap : rawPermListMap) {
+								Object permName = permMap.get("permission");
+								Object modAmount = permMap.get("modifier");
+								if (!(permName instanceof String) || !(modAmount instanceof Double)) {
+									HiddenOre.getPlugin().getLogger().log(Level.WARNING, "Listed permission in state ''{0}'' requires a String permission and a Float modifier", state);
+									continue;
+								}
+								map.put((String) permName, (Double) modAmount);
+							}
+							pstateConfig.permRates = map.entrySet().stream().map((ent) ->
+							{
+								// using entry because it already exists + has key & value
+								// passing in values of k and v to prevent synthetic reference to treemap
+								String k = ent.getKey();
+								Double v = ent.getValue();
+								return new Map.Entry<String, Double>() {
+									@Override public String getKey() { return k; }
+									@Override public Double getValue() { return v; }
+									@Override public Double setValue(Double x) { return v; }
+								};
+							}).collect(Collectors.toList());
+						}
 					}
 					i.stateMasterList.put(state, pstateConfig);
 					HiddenOre.getPlugin().getLogger().info("State " + state + " initialized");
