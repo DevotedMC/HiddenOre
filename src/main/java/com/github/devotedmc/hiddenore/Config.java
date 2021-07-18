@@ -19,6 +19,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.inventory.ItemStack;
 
 import com.github.devotedmc.hiddenore.listeners.ConfigDeferralListener;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Someday it might be nice to refactor this to be a proper object.
@@ -132,7 +133,7 @@ public final class Config {
 				}
 			}
 		} else {
-			HiddenOre.getPlugin().getLogger().info("No Pretty Names specified.");
+			// HiddenOre.getPlugin().getLogger().info("No Pretty Names specified.");
 		}
 		
 		ConfigurationSection tools = file.getConfigurationSection("tools");
@@ -140,11 +141,11 @@ public final class Config {
 			for (String key : tools.getKeys(false)) {
 				if (tools.isConfigurationSection(key)) {
 					ToolConfig.initTool(tools.getConfigurationSection(key));
-					HiddenOre.getPlugin().getLogger().info("Tool " + key + " initialized");
+					// HiddenOre.getPlugin().getLogger().info("Tool " + key + " initialized");
 				}
 			}
 		} else {
-			HiddenOre.getPlugin().getLogger().info("No tool configurations specified. This might cause issues.");
+			// HiddenOre.getPlugin().getLogger().info("No tool configurations specified. This might cause issues.");
 		}
 		
 		ConfigurationSection states = file.getConfigurationSection("states");
@@ -201,7 +202,7 @@ public final class Config {
 						}
 					}
 					i.stateMasterList.put(state, pstateConfig);
-					HiddenOre.getPlugin().getLogger().info("State " + state + " initialized");
+					// HiddenOre.getPlugin().getLogger().info("State " + state + " initialized");
 				}
 			}
 		}
@@ -229,11 +230,11 @@ public final class Config {
 				try {
 					worlduid = UUID.fromString(world);
 					if (HiddenOre.getPlugin().getServer().getWorld(worlduid) == null) {
-						System.err.println("Although it seems to be a UUID, " + world + " no match found yet.");
+						HiddenOre.getPlugin().getLogger().warning("Although it seems to be a UUID, " + world + " no match found yet.");
 						worlduid = null;
 					}
 				} catch (Exception e) {
-					System.out.println("World not defined by UUID");
+					// System.out.println("World not defined by UUID");
 					worlduid = null;
 				}
 				
@@ -241,14 +242,14 @@ public final class Config {
 					try {
 						worlduid = HiddenOre.getPlugin().getServer().getWorld(world).getUID();
 					} catch (Exception f) {
-						System.out.println("World not defined by Name; unable to match " + world + " with loaded world.");
+						// System.out.println("World not defined by Name; unable to match " + world + " with loaded world.");
 					}
 				}
 				
 				Map<NamespacedKey, List<BlockConfig>> worldBlockConfigs = null;
 				
 				if (worlduid == null) {
-					System.err.println("Unable to match world " + world + " with loaded world, registering for post-load.");
+					HiddenOre.getPlugin().getLogger().warning("Unable to match world " + world + " with loaded world, registering for post-load.");
 					worldBlockConfigs = i.preloadBlockConfigs.get(world);
 				} else {
 					worldBlockConfigs = i.blockConfigs.get(worlduid);
@@ -289,7 +290,7 @@ public final class Config {
 	private static void grabBlocks(String world, Map<NamespacedKey, List<BlockConfig>> worldBlockConfigs, ConfigurationSection blocks, Config i) {
 		if (blocks != null) {
 			for (String sourceBlock : blocks.getKeys(false)) {
-				HiddenOre.getPlugin().getLogger().info("Loading config for " + sourceBlock + " for world " + world);
+				// HiddenOre.getPlugin().getLogger().info("Loading config for " + sourceBlock + " for world " + world);
 				ConfigurationSection block = blocks.getConfigurationSection(sourceBlock);
 
 				String cBlockName = block.getString("material");
@@ -390,13 +391,13 @@ public final class Config {
 				}
 			}
 		} else {
-			HiddenOre.getPlugin().getLogger().info("No blocks specified (Why are you using this plugin?)");
+			// HiddenOre.getPlugin().getLogger().info("No blocks specified (Why are you using this plugin?)");
 		}
 
 	}
 	
 	private static DropConfig grabDropConfig(ConfigurationSection drops, String sourceDrop) {
-		HiddenOre.getPlugin().getLogger().info("Loading config for drop " + sourceDrop);
+		// HiddenOre.getPlugin().getLogger().info("Loading config for drop " + sourceDrop);
 		ConfigurationSection drop = drops.getConfigurationSection(sourceDrop);
 		String dPrefix = drop.getString("prefix", null);
 		@SuppressWarnings("unchecked")
@@ -431,7 +432,7 @@ public final class Config {
 		ConfigurationSection biomes = drop.getConfigurationSection("biomes");
 		if (biomes != null) {
 			for (String sourceBiome : biomes.getKeys(false)) {
-				HiddenOre.getPlugin().getLogger().info("Loading config for biome " + sourceBiome);
+				// HiddenOre.getPlugin().getLogger().info("Loading config for biome " + sourceBiome);
 				DropLimitsConfig dlc = grabLimits(biomes.getConfigurationSection(sourceBiome), dc.limits);
 				dc.addBiomeLimits(sourceBiome, dlc);
 			}
@@ -473,13 +474,13 @@ public final class Config {
 		
 		String state = drop.isSet("state") ? drop.getString("state", parent.state) : parent.state;
 		dlc.state = state;
-		
-		HiddenOre.getPlugin().getLogger()
-				.log(Level.INFO, "   loading drop config {0}% {1}-{2} {3}-{4} with {5} tools and {6} state",
-						new Object[] {dlc.chance*100.0, dlc.minAmount, dlc.maxAmount, dlc.minY, dlc.maxY, dlc.tools.size(), dlc.state});
-		HiddenOre.getPlugin().getLogger().log(Level.INFO, "     tools: {0}", dlc.tools);
+
+		// HiddenOre.getPlugin().getLogger()
+		// 		.log(Level.INFO, "   loading drop config {0}% {1}-{2} {3}-{4} with {5} tools and {6} state",
+		// 				new Object[] {dlc.chance*100.0, dlc.minAmount, dlc.maxAmount, dlc.minY, dlc.maxY, dlc.tools.size(), dlc.state});
+		// HiddenOre.getPlugin().getLogger().log(Level.INFO, "     tools: {0}", dlc.tools);
 		if (dlc.xp != null) {
-			HiddenOre.getPlugin().getLogger().log(Level.INFO, "     xp: {0}", dlc.xp.toString());
+			// HiddenOre.getPlugin().getLogger().log(Level.INFO, "     xp: {0}", dlc.xp.toString());
 		}
 		return dlc;
 	}
@@ -539,7 +540,11 @@ public final class Config {
 	public ConfigurationSection getWorldGenerations() {
 		return file.getConfigurationSection("clear_ores");
 	}
-	
+	public static int getWorldHeight(String world) {
+		ConfigurationSection worldConfig = instance.file.getConfigurationSection("worlds").getConfigurationSection(world);
+		return worldConfig.getInt("maxHeight") + Math.abs(worldConfig.getInt("minHeight"));
+	}
+
 	public static PlayerStateConfig getState(String state) {
 		return instance.stateMasterList.get(state);
 	}

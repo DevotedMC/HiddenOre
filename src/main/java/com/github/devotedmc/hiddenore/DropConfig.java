@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -83,12 +84,12 @@ public class DropConfig {
 		}
 	}
 
-	public int getMinY(String biome) {
-		return biomeLimits.containsKey(biome) ? biomeLimits.get(biome).minY : limits.minY;
+	public int getMinY(String biome, World world) {
+		return biomeLimits.containsKey(biome) ? biomeLimits.get(biome).minY : world.getMinHeight();
 	}
 
-	public int getMaxY(String biome) {
-		return biomeLimits.containsKey(biome) ? biomeLimits.get(biome).maxY : limits.maxY;
+	public int getMaxY(String biome, World world) {
+		return biomeLimits.containsKey(biome) ? biomeLimits.get(biome).maxY : world.getMaxHeight();
 	}
 
 	public double getMinAmount(String biome) {

@@ -14,15 +14,12 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
-import org.bukkit.ChunkSnapshot;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 
 import com.github.devotedmc.hiddenore.Config;
 import com.github.devotedmc.hiddenore.HiddenOre;
+import org.bukkit.configuration.ConfigurationSection;
 
 /**
  * A critical component of HiddenOre is preventing gaming of the ore generation system.
@@ -54,10 +51,10 @@ public class BreakTracking {
 
 	public void load() {
 		long s = System.currentTimeMillis();
-		HiddenOre.getPlugin().getLogger().info("Starting Break Tracking load");
+		// HiddenOre.getPlugin().getLogger().info("Starting Break Tracking load");
 		File tf = Config.getTrackFile();
 		if (!tf.exists()) {
-			HiddenOre.getPlugin().getLogger().info("No save exists to load");
+			// HiddenOre.getPlugin().getLogger().info("No save exists to load");
 		} else {
 			try {
 				DataInputStream dis = new DataInputStream(new BufferedInputStream(new FileInputStream(tf)));
@@ -67,7 +64,7 @@ public class BreakTracking {
 				while (active) {
 					try {
 						uuid = dis.readUTF();
-						HiddenOre.getPlugin().getLogger().info("Loading tracking data for world " + uuid);
+						 HiddenOre.getPlugin().getLogger().info("Loading tracking data for world " + uuid);
 					} catch (EOFException done) {
 						active = false;
 						break;
@@ -76,22 +73,25 @@ public class BreakTracking {
 					Map<Long, short[]> world = new HashMap<>();
 					track.put(uid, world);
 
+					World bukkitWorld = Bukkit.getWorld(uid);
+					int worldHeight = bukkitWorld.getMaxHeight() + Math.abs(bukkitWorld.getMinHeight());
+
 					long ccnt = 0l;
 
 					while (dis.readBoolean()) {
 						Long chunk = dis.readLong();
-						short[] layers = new short[256];
+						short[] layers = new short[worldHeight];
 						for (int i = 0; i < layers.length; i++) {
 							layers[i] = dis.readShort();
 						}
 						if (Config.isDebug) {
-							HiddenOre.getPlugin().getLogger().info("Loaded layers for chunk " + chunk);
+							// HiddenOre.getPlugin().getLogger().info("Loaded layers for chunk " + chunk);
 						}
 						ccnt++;
 						world.put(chunk, layers);
 					}
 
-					HiddenOre.getPlugin().getLogger().info("Loaded " + ccnt + " chunks");
+					// HiddenOre.getPlugin().getLogger().info("Loaded " + ccnt + " chunks");
 				}
 
 				dis.close();
@@ -100,18 +100,18 @@ public class BreakTracking {
 			}
 		}
 		s = System.currentTimeMillis() - s;
-		HiddenOre.getPlugin().getLogger().info("Took " + s + "ms to load Break Tracking");
+		// HiddenOre.getPlugin().getLogger().info("Took " + s + "ms to load Break Tracking");
 		
 		if (!Config.isMapActive()) {
-			HiddenOre.getPlugin().getLogger().info("Skipped Break Map init, disabled in config.");
+			// HiddenOre.getPlugin().getLogger().info("Skipped Break Map init, disabled in config.");
 			return;
 		}
 		
 		s = System.currentTimeMillis();
-		HiddenOre.getPlugin().getLogger().info("Starting Break Map load");
+		// HiddenOre.getPlugin().getLogger().info("Starting Break Map load");
 		tf = Config.getMapFile();
 		if (!tf.exists()) {
-			HiddenOre.getPlugin().getLogger().info("No map save exists to load");
+			// HiddenOre.getPlugin().getLogger().info("No map save exists to load");
 		} else {
 			try (DataInputStream dis = new DataInputStream(new BufferedInputStream(new FileInputStream(tf)))){
 
@@ -120,7 +120,7 @@ public class BreakTracking {
 				while (active) {
 					try {
 						uuid = dis.readUTF();
-						HiddenOre.getPlugin().getLogger().info("Loading mapping data for world " + uuid);
+						// HiddenOre.getPlugin().getLogger().info("Loading mapping data for world " + uuid);
 					} catch (EOFException done) {
 						active = false;
 						break;
@@ -131,9 +131,12 @@ public class BreakTracking {
 
 					long ccnt = 0l;
 
+					World bukkitWorld = Bukkit.getWorld(uid);
+					int worldHeight = bukkitWorld.getMaxHeight() + Math.abs(bukkitWorld.getMinHeight());
+
 					while (dis.readBoolean()) {
 						Long chunk = dis.readLong();
-						long[][][] layers = new long[2][256][4];
+						long[][][] layers = new long[2][worldHeight][4];
 						for (int i = 0; i < layers[MAP].length; i++) {
 							for (int j = 0; j < 4; j++) {
 								layers[MAP][i][j] = dis.readLong(); // "map"
@@ -146,13 +149,13 @@ public class BreakTracking {
 						}
 
 						if (Config.isDebug) {
-							HiddenOre.getPlugin().getLogger().info("Loaded layers for chunk " + chunk);
+							// HiddenOre.getPlugin().getLogger().info("Loaded layers for chunk " + chunk);
 						}
 						ccnt++;
 						world.put(chunk, layers);
 					}
 
-					HiddenOre.getPlugin().getLogger().info("Loaded " + ccnt + " chunks");
+					// HiddenOre.getPlugin().getLogger().info("Loaded " + ccnt + " chunks");
 				}
 
 				dis.close();
@@ -161,7 +164,7 @@ public class BreakTracking {
 			}
 		}
 		s = System.currentTimeMillis() - s;
-		HiddenOre.getPlugin().getLogger().info("Took " + s + "ms to load Break Map");
+		// HiddenOre.getPlugin().getLogger().info("Took " + s + "ms to load Break Map");
 	}
 
 	public void liveSave() {
@@ -181,14 +184,14 @@ public class BreakTracking {
 
 	public void save() {
 		long s = System.currentTimeMillis();
-		HiddenOre.getPlugin().getLogger().info("Starting Break Tracking save");
+		// HiddenOre.getPlugin().getLogger().info("Starting Break Tracking save");
 		File tf = Config.getTrackFile();
 		try {
 			if (tf.exists()) {
 				File tfb = new File(tf.getAbsoluteFile() + ".backup");
 				if (tfb.exists()) {
 					if (!tfb.delete()) {
-						HiddenOre.getPlugin().getLogger().info("Couldn't remove old backup file - " + tfb);
+						// HiddenOre.getPlugin().getLogger().info("Couldn't remove old backup file - " + tfb);
 					} else {
 						tf.renameTo(tfb);
 					}
@@ -204,12 +207,12 @@ public class BreakTracking {
 				DataOutputStream oos = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(tf)));
 
 				for (Map.Entry<UUID, Map<Long, short[]>> world : track.entrySet()) {
-					HiddenOre.getPlugin().getLogger().info("Saving world - " + world.getKey());
+					// HiddenOre.getPlugin().getLogger().info("Saving world - " + world.getKey());
 					oos.writeUTF(world.getKey().toString());
 					long ccnt = 0l;
 					for (Map.Entry<Long, short[]> chunk : world.getValue().entrySet()) {
 						if (Config.isDebug) {
-							HiddenOre.getPlugin().getLogger().info(" Saving chunk " + chunk.getKey());
+							// HiddenOre.getPlugin().getLogger().info(" Saving chunk " + chunk.getKey());
 						}
 						oos.writeBoolean(true);
 						oos.writeLong(chunk.getKey());
@@ -219,7 +222,7 @@ public class BreakTracking {
 						}
 						ccnt++;
 					}
-					HiddenOre.getPlugin().getLogger().info(" Saved " + ccnt + " chunks");
+					// HiddenOre.getPlugin().getLogger().info(" Saved " + ccnt + " chunks");
 					oos.writeBoolean(false);
 				}
 				oos.flush();
@@ -231,23 +234,23 @@ public class BreakTracking {
 			HiddenOre.getPlugin().getLogger().log(Level.SEVERE, "Failed to save break tracking.", ioe);
 		}
 		s = System.currentTimeMillis() - s;
-		HiddenOre.getPlugin().getLogger().info("Took " + s + "ms to save Break Tracking");
+		// HiddenOre.getPlugin().getLogger().info("Took " + s + "ms to save Break Tracking");
 	}
 
 	public void saveMap() {
 		if (!Config.isMapActive()) {
-			HiddenOre.getPlugin().getLogger().info("Skipped Break Map save, disabled in config.");
+			// HiddenOre.getPlugin().getLogger().info("Skipped Break Map save, disabled in config.");
 		}
 		
 		long s = System.currentTimeMillis();
-		HiddenOre.getPlugin().getLogger().info("Starting Break Map save");
+		// HiddenOre.getPlugin().getLogger().info("Starting Break Map save");
 		File tf = Config.getMapFile();
 		try {
 			if (tf.exists()) {
 				File tfb = new File(tf.getAbsoluteFile() + ".backup");
 				if (tfb.exists()) {
 					if (!tfb.delete()) {
-						HiddenOre.getPlugin().getLogger().info("Couldn't remove old map backup file - " + tfb);
+						// HiddenOre.getPlugin().getLogger().info("Couldn't remove old map backup file - " + tfb);
 					} else {
 						tf.renameTo(tfb);
 					}
@@ -263,12 +266,12 @@ public class BreakTracking {
 				DataOutputStream oos = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(tf)));
 
 				for (Map.Entry<UUID, Map<Long, long[][][]>> world : map.entrySet()) {
-					HiddenOre.getPlugin().getLogger().info("Saving world - " + world.getKey());
+					// HiddenOre.getPlugin().getLogger().info("Saving world - " + world.getKey());
 					oos.writeUTF(world.getKey().toString());
 					long ccnt = 0l;
 					for (Map.Entry<Long, long[][][]> chunk : world.getValue().entrySet()) {
 						if (Config.isDebug) {
-							HiddenOre.getPlugin().getLogger().info(" Saving chunk " + chunk.getKey());
+							// HiddenOre.getPlugin().getLogger().info(" Saving chunk " + chunk.getKey());
 						}
 						oos.writeBoolean(true);
 						oos.writeLong(chunk.getKey());
@@ -285,7 +288,7 @@ public class BreakTracking {
 						}
 						ccnt++;
 					}
-					HiddenOre.getPlugin().getLogger().info(" Saved " + ccnt + " chunks");
+					// HiddenOre.getPlugin().getLogger().info(" Saved " + ccnt + " chunks");
 					oos.writeBoolean(false);
 				}
 				oos.flush();
@@ -297,7 +300,7 @@ public class BreakTracking {
 			HiddenOre.getPlugin().getLogger().log(Level.SEVERE, "Failed to save break map.", ioe);
 		}
 		s = System.currentTimeMillis() - s;
-		HiddenOre.getPlugin().getLogger().info("Took " + s + "ms to save Break Map");
+		// HiddenOre.getPlugin().getLogger().info("Took " + s + "ms to save Break Map");
 	}
 
 	/**
@@ -310,7 +313,7 @@ public class BreakTracking {
 		if (!Config.isMapActive()) return true;
 		
 		long s = System.currentTimeMillis();
-		int Y = loc.getBlockY();
+		int Y = Math.abs(loc.getWorld().getMinHeight()) + loc.getBlockY();
 		int X = (loc.getBlockX() % 16 + 16) % 16;
 		int Z = (loc.getBlockZ() % 16 + 16) % 16;
 		UUID world = loc.getWorld().getUID();
@@ -327,13 +330,14 @@ public class BreakTracking {
 		
 		long[][][] mapLayers = mapChunks.get(chunk_id);
 		if (mapLayers == null) { // init layers
-			mapLayers = new long[2][256][4];
+			int height = Math.abs(loc.getWorld().getMinHeight()) + loc.getWorld().getMaxHeight();
+			mapLayers = new long[2][height][4];
 			mapChunks.put(chunk_id, mapLayers);
 			
-			for (int y = 0; y < 256; y++) {
+			for (int y = 0; y < height; y++) {
 				for (int x = 0; x < 16; x++) {
 					for (int z = 0; z < 16; z++) {
-						Block b = chunk.getBlock(x, y, z);
+						Block b = chunk.getBlock(x, Math.abs(loc.getWorld().getMinHeight()) - y, z);
 						if (b.isEmpty() || b.isLiquid()) {
 							int bloc = (( x << 4) + z);
 							int quad = (block_id / 64);
@@ -357,7 +361,7 @@ public class BreakTracking {
 		
 		s = System.currentTimeMillis() - s;
 		if (s > 10l) {
-			HiddenOre.getPlugin().getLogger().info("Took a long time (" + s + "ms) recording generation at " + loc);
+			// HiddenOre.getPlugin().getLogger().info("Took a long time (" + s + "ms) recording generation at " + loc);
 		}
 		
 		return ret;
@@ -383,7 +387,7 @@ public class BreakTracking {
 		
 		if (!Config.isMapActive()) return true;
 		
-		int Y = loc.getBlockY();
+		int Y = Math.abs(loc.getWorld().getMinHeight()) + loc.getBlockY();
 		int X = (loc.getBlockX() % 16 + 16) % 16;
 		int Z = (loc.getBlockZ() % 16 + 16) % 16;
 		UUID world = loc.getWorld().getUID();
@@ -429,7 +433,7 @@ public class BreakTracking {
 		if (!Config.isMapActive()) return;
 		
 		long s = System.currentTimeMillis();
-		int Y = loc.getBlockY();
+		int Y = Math.abs(loc.getWorld().getMinHeight()) + loc.getBlockY();
 		int X = (loc.getBlockX() % 16 + 16) % 16;
 		int Z = (loc.getBlockZ() % 16 + 16) % 16;
 		UUID world = loc.getWorld().getUID();
@@ -448,11 +452,13 @@ public class BreakTracking {
 		if (mapLayers == null) {
 			return; // should be init'd or this is being improperly called.
 		}
-		
+
+		int worldHeight = Math.abs(loc.getWorld().getMinHeight()) + loc.getWorld().getMaxHeight();
+
 		mapLayers[GEN][Y][quad_id] |= mask_id;
 		if (exp) {
 			if (Y > 0) mapLayers[GEN][Y-1][quad_id] |= mask_id;
-			if (Y < 255) mapLayers[GEN][Y+1][quad_id] |= mask_id;
+			if (Y <= worldHeight) mapLayers[GEN][Y+1][quad_id] |= mask_id;
 			
 			if (X > 0) {
 				int nblock_id = (((X-1) << 4) + Z);
@@ -485,7 +491,7 @@ public class BreakTracking {
 		}
 		s = System.currentTimeMillis() - s;
 		if (s > 10l) {
-			HiddenOre.getPlugin().getLogger().info("Took a long time (" + s + "ms) recording genmap post break at " + loc);
+			// HiddenOre.getPlugin().getLogger().info("Took a long time (" + s + "ms) recording genmap post break at " + loc);
 		}
 	
 	}
@@ -506,7 +512,7 @@ public class BreakTracking {
 		long recentCheck = 0l;
 		
 		long s = System.currentTimeMillis();
-		int Y = loc.getBlockY();
+		int Y = Math.abs(loc.getWorld().getMinHeight()) + loc.getBlockY();
 		int X = (loc.getBlockX() % 16 + 16) % 16;
 		int Z = (loc.getBlockZ() % 16 + 16) % 16;
 		UUID world = loc.getWorld().getUID();
@@ -515,6 +521,8 @@ public class BreakTracking {
 		int block_id = ((X << 4) + Z);
 		int quad_id = (block_id / 64);
 		long mask_id = (1l << (block_id % 64));
+
+		int worldHeight = loc.getWorld().getMaxHeight() + Math.abs(loc.getWorld().getMinHeight());
 		
 		Map<Long, short[]> chunks = track.get(world);
 		if (chunks == null) { // init chunk
@@ -527,7 +535,7 @@ public class BreakTracking {
 		short[] layers = chunks.get(chunk_id);
 		if (layers == null) { // init layers
 			initLayers = System.nanoTime();
-			layers = new short[256];
+			layers = new short[worldHeight];
 			chunks.put(chunk_id, layers);
 			initLayers = System.nanoTime() - initLayers;
 		}
@@ -547,16 +555,16 @@ public class BreakTracking {
 			long[][][] mapLayers = mapChunks.get(chunk_id);
 			if (mapLayers == null) { // init layers
 				initMapLayers = System.nanoTime();
-				mapLayers = new long[2][256][4];
+				mapLayers = new long[2][worldHeight][4];
 				mapChunks.put(chunk_id, mapLayers);
 				ChunkSnapshot chunkS = chunk.getChunkSnapshot();
 				
-				for (int y = 0; y < 256; y++) {
+				for (int y = 0; y < worldHeight; y++) {
 					for (int x = 0; x < 16; x++) {
 						for (int z = 0; z < 16; z++) {
 							//Block b = chunk.getBlock(x, y, z);
 							//if (b.isEmpty() || b.isLiquid()) {
-							Material m = chunkS.getBlockType(x, y, z);
+							Material m = chunkS.getBlockType(x, Math.abs(loc.getWorld().getMinHeight()) - y, z);
 							if (Material.AIR.equals(m) || Material.WATER.equals(m) || Material.LAVA.equals(m)) {
 								int bloc = ((x << 4) + z);
 								int quad = (block_id / 64);
@@ -586,7 +594,7 @@ public class BreakTracking {
 			// quick layer scan for air and water
 			for (int x = 0; x < 16; x++) {
 				for (int z = 0; z < 16; z++) {
-					Block b = chunk.getBlock(x, Y, z);
+					Block b = chunk.getBlock(x, Math.abs(loc.getWorld().getMinHeight()) - Y, z);
 					if (b.isEmpty() || b.isLiquid()) {
 						layers[Y]++;
 					}
@@ -595,7 +603,7 @@ public class BreakTracking {
 			scanLayer = System.nanoTime() - scanLayer;
 		}
 
-		if (layers[Y] >= 256) { // done
+		if (layers[Y] >= worldHeight) { // done
 			ret = false;
 		} else if (ret) {
 			layers[Y]++; // represent new break in layer.
@@ -629,12 +637,12 @@ public class BreakTracking {
 					.info("now world " + world + " chunk " + chunk_id + " layersum " + layers[Y] + " map" + quad_id + ":" + mask_id + "t " + spc);
 		}
 
-		s = System.currentTimeMillis() - s;
-		if (s > 10l) {
-			HiddenOre.getPlugin().getLogger().info("Took a long time (" + s + "ms) recording break at " + loc);
-			HiddenOre.getPlugin().getLogger().log(Level.INFO, "Breakdown: chunk{0}ns layer{1}ns mchunk{2}ns mlayer{3}ns scan{4}ns recent{5}ns",
-					new Object[] {initChunk, initLayers, initMapChunk, initMapLayers, scanLayer, recentCheck});
-		}
+		// s = System.currentTimeMillis() - s;
+		// if (s > 10l) {
+			// HiddenOre.getPlugin().getLogger().info("Took a long time (" + s + "ms) recording break at " + loc);
+			// HiddenOre.getPlugin().getLogger().log(Level.INFO, "Breakdown: chunk{0}ns layer{1}ns mchunk{2}ns mlayer{3}ns scan{4}ns recent{5}ns",
+			// 		new Object[] {initChunk, initLayers, initMapChunk, initMapLayers, scanLayer, recentCheck});
+		// }
 
 		return ret;
 	}

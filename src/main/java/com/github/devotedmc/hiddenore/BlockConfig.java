@@ -90,8 +90,8 @@ public class BlockConfig {
 
 		for (Map.Entry<String, DropConfig> dce : dropConfigs.entrySet()) {
 			DropConfig dc = dce.getValue();
-			if (dc.dropsWithTool(biome, tool) && blockY <= dc.getMaxY(biome)
-					&& blockY >= dc.getMinY(biome)) {
+			if (dc.dropsWithTool(biome, tool) && blockY <= dc.getMaxY(biome, loc.getWorld())
+					&& blockY >= dc.getMinY(biome, loc.getWorld())) {
 				
 				ToolConfig tc = dc.dropsWithToolConfig(biome, tool);
 				localChance = dc.getChance(biome) * (tc == null ? 1.0 : tc.getDropChanceModifier()) * dc.getStateChance(biome, player);
@@ -126,8 +126,8 @@ public class BlockConfig {
 			}
 		}
 		if (Config.isDebug) {
-			HiddenOre.getPlugin().getLogger()
-					.log(Level.INFO, "{0} tested {1} cumm {2} dice", new Object[] {counted, Double.toString(cumChance), Double.toString(dice)});
+			// HiddenOre.getPlugin().getLogger()
+			// 		.log(Level.INFO, "{0} tested {1} cumm {2} dice", new Object[] {counted, Double.toString(cumChance), Double.toString(dice)});
 		}
 
 		return null;
