@@ -165,12 +165,12 @@ public class ToolConfig {
 			if (!tool.contains("ignore.all")) {
 				return;
 			} else {
-				HiddenOre.getPlugin().getLogger().info("Catchall tool found: " + tool.getName());
+				// HiddenOre.getPlugin().getLogger().info("Catchall tool found: " + tool.getName());
 			}
 		}
 		
 		if (tools.containsKey(tool.getName())){
-			HiddenOre.getPlugin().getLogger().info("Duplicate definition for tool: " + tool.getName());
+			// HiddenOre.getPlugin().getLogger().info("Duplicate definition for tool: " + tool.getName());
 		} else {
 			toolList.add(tool.getName());
 		}

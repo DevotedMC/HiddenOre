@@ -41,7 +41,7 @@ public class ConfigDeferralListener implements Listener {
 			if (Config.instance.preloadBlockConfigs.size() > 0) {
 				for (String key : Config.instance.preloadBlockConfigs.keySet()) {
 					if (world.getName().equals(key)) {
-						HiddenOre.getPlugin().getLogger().log( Level.INFO, "Found a match during loading for {0}, bound config to world", key);
+						// HiddenOre.getPlugin().getLogger().log( Level.INFO, "Found a match during loading for {0}, bound config to world", key);
 						Config.instance.blockConfigs.put(world.getUID(), Config.instance.preloadBlockConfigs.get(key));
 						found = key;
 						break;
@@ -50,7 +50,7 @@ public class ConfigDeferralListener implements Listener {
 					try {
 						UUID worldkey = UUID.fromString(key);
 						if (worldkey != null && world.getUID().equals(worldkey)) {
-							HiddenOre.getPlugin().getLogger().log( Level.INFO, "Found a match during loading for {0}, bound config to world", key);
+							// HiddenOre.getPlugin().getLogger().log( Level.INFO, "Found a match during loading for {0}, bound config to world", key);
 							Config.instance.blockConfigs.put(world.getUID(), Config.instance.preloadBlockConfigs.get(key));
 							found = key;
 							break;							

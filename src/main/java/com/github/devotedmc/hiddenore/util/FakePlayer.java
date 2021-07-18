@@ -1,15 +1,9 @@
 package com.github.devotedmc.hiddenore.util;
 
 import java.net.InetSocketAddress;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
+import net.kyori.adventure.text.Component;
 import org.bukkit.Chunk;
 import org.bukkit.DyeColor;
 import org.bukkit.Effect;
@@ -54,6 +48,7 @@ import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent.Reason;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerResourcePackStatusEvent.Status;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.inventory.EntityEquipment;
@@ -88,6 +83,8 @@ import com.destroystokyo.paper.entity.TargetEntityInfo;
 import com.destroystokyo.paper.profile.PlayerProfile;
 
 import net.md_5.bungee.api.chat.BaseComponent;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class FakePlayer implements Player {
 	private final ItemStack inHand;
@@ -218,6 +215,16 @@ public class FakePlayer implements Player {
 
 			@Override
 			public void clear() {
+			}
+
+			/**
+			 * Closes the inventory for all viewers.
+			 *
+			 * @return the number if viewers the inventory was closed for
+			 */
+			@Override
+			public int close() {
+				return 0;
 			}
 
 			@Override
@@ -441,6 +448,16 @@ public class FakePlayer implements Player {
 		return false;
 	}
 
+	/**
+	 * Gets if the entity is climbing.
+	 *
+	 * @return if the entity is climbing
+	 */
+	@Override
+	public boolean isClimbing() {
+		return false;
+	}
+
 	@Override
 	public int getSleepTicks() {
 		return 0;
@@ -598,6 +615,20 @@ public class FakePlayer implements Player {
 		return false;
 	}
 
+	/**
+	 * Checks whether the living entity has block line of sight to the given block.
+	 * <p>
+	 * This uses the same algorithm that hostile mobs use to find the closest
+	 * player.
+	 *
+	 * @param location the location to determine line of sight to
+	 * @return true if there is a line of sight, false if not
+	 */
+	@Override
+	public boolean hasLineOfSight(@NotNull Location location) {
+		return false;
+	}
+
 	@Override
 	public boolean getRemoveWhenFarAway() {
 
@@ -683,6 +714,17 @@ public class FakePlayer implements Player {
 		return null;
 	}
 
+	/**
+	 * Registers a generic attribute to that attributable instance.
+	 * Allows it to add attributes not registered by default to that entity.
+	 *
+	 * @param attribute the generic attribute to register
+	 */
+	@Override
+	public void registerAttribute(@NotNull Attribute attribute) {
+
+	}
+
 	@Override
 	public Location getLocation() {
 		return location;
@@ -760,6 +802,70 @@ public class FakePlayer implements Player {
 	@Override
 	public void setFireTicks(int ticks) {
 
+	}
+
+	/**
+	 * Sets if the entity has visual fire (it will always appear to be on fire).
+	 *
+	 * @param fire whether visual fire is enabled
+	 */
+	@Override
+	public void setVisualFire(boolean fire) {
+
+	}
+
+	/**
+	 * Gets if the entity has visual fire (it will always appear to be on fire).
+	 *
+	 * @return whether visual fire is enabled
+	 */
+	@Override
+	public boolean isVisualFire() {
+		return false;
+	}
+
+	/**
+	 * Returns the entity's current freeze ticks (amount of ticks the entity has
+	 * been in powdered snow).
+	 *
+	 * @return int freeze ticks
+	 */
+	@Override
+	public int getFreezeTicks() {
+		return 0;
+	}
+
+	/**
+	 * Returns the entity's maximum freeze ticks (amount of ticks before it will
+	 * be fully frozen)
+	 *
+	 * @return int max freeze ticks
+	 */
+	@Override
+	public int getMaxFreezeTicks() {
+		return 0;
+	}
+
+	/**
+	 * Sets the entity's current freeze ticks (amount of ticks the entity has
+	 * been in powdered snow).
+	 *
+	 * @param ticks Current ticks
+	 */
+	@Override
+	public void setFreezeTicks(int ticks) {
+
+	}
+
+	/**
+	 * Gets if the entity is fully frozen (it has been in powdered snow for max
+	 * freeze ticks).
+	 *
+	 * @return freeze status
+	 */
+	@Override
+	public boolean isFrozen() {
+		return false;
 	}
 
 	@Override
@@ -879,6 +985,34 @@ public class FakePlayer implements Player {
 
 	@Override
 	public void setCustomName(String name) {
+
+	}
+
+	/**
+	 * Gets the custom name.
+	 *
+	 * <p>This value has no effect on players, they will always use their real name.</p>
+	 *
+	 * @return the custom name
+	 */
+	@Override
+	public @Nullable Component customName() {
+		return null;
+	}
+
+	/**
+	 * Sets the custom name.
+	 *
+	 * <p>This name will be used in death messages and can be sent to the client as a nameplate over the mob.</p>
+	 *
+	 * <p>Setting the name to {@code null} will clear it.</p>
+	 *
+	 * <p>This value has no effect on players, they will always use their real name.</p>
+	 *
+	 * @param customName the custom name to set
+	 */
+	@Override
+	public void customName(@Nullable Component customName) {
 
 	}
 
@@ -1168,6 +1302,26 @@ public class FakePlayer implements Player {
 		return null;
 	}
 
+	/**
+	 * Gets the "friendly" name to display of this player.
+	 *
+	 * @return the display name
+	 */
+	@Override
+	public @NotNull Component displayName() {
+		return null;
+	}
+
+	/**
+	 * Sets the "friendly" name to display of this player.
+	 *
+	 * @param displayName the display name to set
+	 */
+	@Override
+	public void displayName(@Nullable Component displayName) {
+
+	}
+
 	@Override
 	public String getDisplayName() {
 		return "Spoof";
@@ -1176,6 +1330,48 @@ public class FakePlayer implements Player {
 	@Override
 	public void setDisplayName(String name) {
 
+	}
+
+	/**
+	 * Sets the name that is shown on the in-game player list.
+	 * <p>
+	 * If the value is null, the name will be identical to {@link #getName()}.
+	 *
+	 * @param name new player list name
+	 */
+	@Override
+	public void playerListName(@Nullable Component name) {
+
+	}
+
+	/**
+	 * Gets the name that is shown on the in-game player list.
+	 *
+	 * @return the player list name
+	 */
+	@Override
+	public @NotNull Component playerListName() {
+		return null;
+	}
+
+	/**
+	 * Gets the currently displayed player list header for this player.
+	 *
+	 * @return player list header or null
+	 */
+	@Override
+	public @Nullable Component playerListHeader() {
+		return null;
+	}
+
+	/**
+	 * Gets the currently displayed player list footer for this player.
+	 *
+	 * @return player list footer or null
+	 */
+	@Override
+	public @Nullable Component playerListFooter() {
+		return null;
 	}
 
 	@Override
@@ -1212,6 +1408,27 @@ public class FakePlayer implements Player {
 
 	@Override
 	public void kickPlayer(String message) {
+
+	}
+
+	/**
+	 * Kicks player with custom kick message.
+	 *
+	 * @param message kick message
+	 */
+	@Override
+	public void kick(@Nullable Component message) {
+
+	}
+
+	/**
+	 * Kicks player with custom kick message and cause.
+	 *
+	 * @param message kick message
+	 * @param cause   kick cause
+	 */
+	@Override
+	public void kick(@Nullable Component message, PlayerKickEvent.@NotNull Cause cause) {
 
 	}
 
@@ -1299,6 +1516,32 @@ public class FakePlayer implements Player {
 
 	}
 
+	/**
+	 * Force this player to break a Block using the item in their main hand.
+	 * <p>
+	 * This method will respect enchantments, handle item durability (if
+	 * applicable) and drop experience and the correct items according to the
+	 * tool/item in the player's hand.
+	 * <p>
+	 * Note that this method will call a {@link BlockBreakEvent}, meaning that
+	 * this method may not be successful in breaking the block if the event was
+	 * cancelled by a third party plugin. Care should be taken if running this
+	 * method in a BlockBreakEvent listener as recursion may be possible if it
+	 * is invoked on the same {@link Block} being broken in the event.
+	 * <p>
+	 * Additionally, a {@link BlockDropItemEvent} is called for the items
+	 * dropped by this method (if successful).
+	 * <p>
+	 * The block must be in the same world as the player.
+	 *
+	 * @param block the block to break
+	 * @return true if the block was broken, false if the break failed
+	 */
+	@Override
+	public boolean breakBlock(@NotNull Block block) {
+		return false;
+	}
+
 	@Override
 	public void sendBlockChange(Location loc, Material material, byte data) {
 
@@ -1308,6 +1551,48 @@ public class FakePlayer implements Player {
 	public boolean sendChunkChange(Location loc, int sx, int sy, int sz, byte[] data) {
 
 		return false;
+	}
+
+	/**
+	 * Send a sign change. This fakes a sign change packet for a user at
+	 * a certain location. This will not actually change the world in any way.
+	 * This method will use a sign at the location's block or a faked sign
+	 * sent via
+	 * {@link #sendBlockChange(Location, Material, byte)}.
+	 * <p>
+	 * If the client does not have a sign at the given location it will
+	 * display an error message to the user.
+	 *
+	 * @param loc   the location of the sign
+	 * @param lines the new text on the sign or null to clear it
+	 * @throws IllegalArgumentException if location is null
+	 * @throws IllegalArgumentException if lines is non-null and has a length less than 4
+	 */
+	@Override
+	public void sendSignChange(@NotNull Location loc, @Nullable List<Component> lines) throws IllegalArgumentException {
+
+	}
+
+	/**
+	 * Send a sign change. This fakes a sign change packet for a user at
+	 * a certain location. This will not actually change the world in any way.
+	 * This method will use a sign at the location's block or a faked sign
+	 * sent via
+	 * {@link #sendBlockChange(Location, Material, byte)}.
+	 * <p>
+	 * If the client does not have a sign at the given location it will
+	 * display an error message to the user.
+	 *
+	 * @param loc      the location of the sign
+	 * @param lines    the new text on the sign or null to clear it
+	 * @param dyeColor the color of the sign
+	 * @throws IllegalArgumentException if location is null
+	 * @throws IllegalArgumentException if dyeColor is null
+	 * @throws IllegalArgumentException if lines is non-null and has a length less than 4
+	 */
+	@Override
+	public void sendSignChange(@NotNull Location loc, @Nullable List<Component> lines, @NotNull DyeColor dyeColor) throws IllegalArgumentException {
+
 	}
 
 	/*@Override
@@ -1541,6 +1826,78 @@ public class FakePlayer implements Player {
 
 	@Override
 	public void setFoodLevel(int value) {
+
+	}
+
+	/**
+	 * Get the regeneration rate (1 health per x ticks) of
+	 * the HumanEntity when they have saturation and
+	 * their food level is {@literal >=} 20. Default is 10.
+	 *
+	 * @return the regeneration rate
+	 */
+	@Override
+	public int getSaturatedRegenRate() {
+		return 0;
+	}
+
+	/**
+	 * Set the regeneration rate (1 health per x ticks) of
+	 * the HumanEntity when they have saturation and
+	 * their food level is {@literal >=} 20. Default is 10.
+	 * Not affected if the world's difficulty is peaceful.
+	 *
+	 * @param ticks the amount of ticks to gain 1 health.
+	 */
+	@Override
+	public void setSaturatedRegenRate(int ticks) {
+
+	}
+
+	/**
+	 * Get the regeneration rate (1 health per x ticks) of
+	 * the HumanEntity when they have no saturation and
+	 * their food level is {@literal >=} 18. Default is 80.
+	 *
+	 * @return the regeneration rate
+	 */
+	@Override
+	public int getUnsaturatedRegenRate() {
+		return 0;
+	}
+
+	/**
+	 * Get the regeneration rate (1 health per x ticks) of
+	 * the HumanEntity when they have no saturation and
+	 * their food level is {@literal >=} 18. Default is 80.
+	 * Not affected if the world's difficulty is peaceful.
+	 *
+	 * @param ticks the amount of ticks to gain 1 health.
+	 */
+	@Override
+	public void setUnsaturatedRegenRate(int ticks) {
+
+	}
+
+	/**
+	 * Get the starvation rate (1 health per x ticks) of
+	 * the HumanEntity. Default is 80.
+	 *
+	 * @return the starvation rate
+	 */
+	@Override
+	public int getStarvationRate() {
+		return 0;
+	}
+
+	/**
+	 * Get the starvation rate (1 health per x ticks) of
+	 * the HumanEntity. Default is 80.
+	 *
+	 * @param ticks the amount of ticks to lose 1 health
+	 */
+	@Override
+	public void setStarvationRate(int ticks) {
 
 	}
 
@@ -1824,6 +2181,30 @@ public class FakePlayer implements Player {
 		return false;
 	}
 
+	/**
+	 * Gets the hand raised by this living entity. Will be either
+	 * {@link EquipmentSlot#HAND} or
+	 * {@link EquipmentSlot#OFF_HAND}.
+	 *
+	 * @return the hand raised
+	 */
+	@Override
+	public @NotNull EquipmentSlot getHandRaised() {
+		return null;
+	}
+
+	/**
+	 * Gets the item that the player is using (eating food, drawing back a bow,
+	 * blocking, etc.)
+	 *
+	 * @return the item being used by the player, or null if they are not using
+	 * an item
+	 */
+	@Override
+	public @Nullable ItemStack getItemInUse() {
+		return null;
+	}
+
 	@Override
 	public InventoryView openMerchant(Merchant arg0, boolean arg1) {
 		return null;
@@ -1832,6 +2213,16 @@ public class FakePlayer implements Player {
 	@Override
 	public void setCooldown(Material arg0, int arg1) {
 		
+	}
+
+	/**
+	 * If the player has slept enough to count towards passing the night.
+	 *
+	 * @return true if the player has slept enough
+	 */
+	@Override
+	public boolean isDeeplySleeping() {
+		return false;
 	}
 
 	@Override
@@ -1957,6 +2348,19 @@ public class FakePlayer implements Player {
 	@Override
 	public void sendBlockChange(Location arg0, BlockData arg1) {
 		
+	}
+
+	/**
+	 * Send block damage. This fakes block break progress for a user at a
+	 * certain location. This will not actually change the block's break
+	 * progress in any way.
+	 *
+	 * @param loc      the location of the damaged block
+	 * @param progress the progress from 0.0 - 1.0 where 0 is no damage and
+	 */
+	@Override
+	public void sendBlockDamage(@NotNull Location loc, float progress) {
+
 	}
 
 	@Override
@@ -2128,6 +2532,34 @@ public class FakePlayer implements Player {
 	@Override
 	public int getClientViewDistance() {
 		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	/**
+	 * Gets the player's current locale.
+	 *
+	 * @return the player's locale
+	 */
+	@Override
+	public @NotNull Locale locale() {
+		return null;
+	}
+
+	/**
+	 * Gets the player's estimated ping in milliseconds.
+	 * <p>
+	 * In Vanilla this value represents the average of the response time to the
+	 * last four application layer ping packets sent. This value does not
+	 * represent the network round trip time and as such may have less
+	 * granularity and be impacted by other sources. For these reasons it
+	 * <b>should not</b> be used for anti-cheat purposes. Its recommended use is
+	 * only as a <b>qualitative</b> indicator of connection quality (Vanilla
+	 * uses it for this purpose in the tab list).
+	 *
+	 * @return player ping
+	 */
+	@Override
+	public int getPing() {
 		return 0;
 	}
 
@@ -2545,6 +2977,28 @@ public class FakePlayer implements Player {
 		return null;
 	}
 
+	/**
+	 * Send a packet to the player indicating its operator status level.
+	 * <p>
+	 * <b>Note:</b> This will not persist across more than the current connection, and setting the player's operator
+	 * status as a later point <i>will</i> override the effects of this.
+	 *
+	 * @param level The level to send to the player. Must be in {@code [0, 4]}.
+	 * @throws IllegalArgumentException If the level is negative or greater than {@code 4} (i.e. not within {@code [0, 4]}).
+	 */
+	@Override
+	public void sendOpLevel(byte level) {
+
+	}
+
+	/**
+	 * @return Returns a set of Players within this player's tracking range (that the player's client can "see")
+	 */
+	@Override
+	public @NotNull Set<Player> getTrackedPlayers() {
+		return null;
+	}
+
 	@Override
 	public boolean getAffectsSpawning() {
 		// TODO Auto-generated method stub
@@ -2675,6 +3129,77 @@ public class FakePlayer implements Player {
 	public void setResourcePack(String arg0, String arg1) {
 		// TODO Auto-generated method stub
 		
+	}
+
+	/**
+	 * Request that the player's client download and switch resource packs.
+	 * <p>
+	 * The player's client will download the new resource pack asynchronously
+	 * in the background, and will automatically switch to it once the
+	 * download is complete. If the client has downloaded and cached the same
+	 * resource pack in the past, it will perform a quick timestamp check
+	 * over the network to determine if the resource pack has changed and
+	 * needs to be downloaded again. When this request is sent for the very
+	 * first time from a given server, the client will first display a
+	 * confirmation GUI to the player before proceeding with the download.
+	 * <p>
+	 * Notes:
+	 * <ul>
+	 * <li>Players can disable server resources on their client, in which
+	 *     case this method will have no affect on them.
+	 * <li>There is no concept of resetting resource packs back to default
+	 *     within Minecraft, so players will have to relog to do so.
+	 * </ul>
+	 *
+	 * @param url      The URL from which the client will download the resource
+	 *                 pack. The string must contain only US-ASCII characters and should
+	 *                 be encoded as per RFC 1738.
+	 * @param hash     A 40 character hexadecimal and lowercase SHA-1 digest of
+	 *                 the resource pack file.
+	 * @param required Marks if the resource pack should be required by the client
+	 * @throws IllegalArgumentException Thrown if the URL is null.
+	 * @throws IllegalArgumentException Thrown if the URL is too long. The
+	 *                                  length restriction is an implementation specific arbitrary value.
+	 */
+	@Override
+	public void setResourcePack(@NotNull String url, @NotNull String hash, boolean required) {
+
+	}
+
+	/**
+	 * Request that the player's client download and switch resource packs.
+	 * <p>
+	 * The player's client will download the new resource pack asynchronously
+	 * in the background, and will automatically switch to it once the
+	 * download is complete. If the client has downloaded and cached the same
+	 * resource pack in the past, it will perform a quick timestamp check
+	 * over the network to determine if the resource pack has changed and
+	 * needs to be downloaded again. When this request is sent for the very
+	 * first time from a given server, the client will first display a
+	 * confirmation GUI to the player before proceeding with the download.
+	 * <p>
+	 * Notes:
+	 * <ul>
+	 * <li>Players can disable server resources on their client, in which
+	 *     case this method will have no affect on them.
+	 * <li>There is no concept of resetting resource packs back to default
+	 *     within Minecraft, so players will have to relog to do so.
+	 * </ul>
+	 *
+	 * @param url                The URL from which the client will download the resource
+	 *                           pack. The string must contain only US-ASCII characters and should
+	 *                           be encoded as per RFC 1738.
+	 * @param hash               A 40 character hexadecimal and lowercase SHA-1 digest of
+	 *                           the resource pack file.
+	 * @param required           Marks if the resource pack should be required by the client
+	 * @param resourcePackPrompt A Prompt to be displayed in the client request
+	 * @throws IllegalArgumentException Thrown if the URL is null.
+	 * @throws IllegalArgumentException Thrown if the URL is too long. The
+	 *                                  length restriction is an implementation specific arbitrary value.
+	 */
+	@Override
+	public void setResourcePack(@NotNull String url, @NotNull String hash, boolean required, @Nullable Component resourcePackPrompt) {
+
 	}
 
 	@Override

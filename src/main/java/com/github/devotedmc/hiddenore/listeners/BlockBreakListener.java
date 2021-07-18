@@ -136,8 +136,8 @@ public class BlockBreakListener implements Listener {
 					continue;
 				}
 
-				if (b.getLocation().getBlockY() > dc.getMaxY(biomeName)
-						|| b.getLocation().getBlockY() < dc.getMinY(biomeName)) {
+				if (b.getLocation().getBlockY() > dc.getMaxY(biomeName, b.getWorld())
+						|| b.getLocation().getBlockY() < dc.getMinY(biomeName, b.getWorld())) {
 					debug("Cannot drop {0} - wrong Y", drop);
 					continue;
 				}
@@ -290,7 +290,7 @@ public class BlockBreakListener implements Listener {
 
 			// Correct stats output.
 			for (ItemStack item: hoe.getDrops()) {
-				String name = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+				String name = item.getI18NDisplayName();
 				log("STAT: Player {0} at {1} broke {2} - dropping {3} {4}", 
 						player.getDisplayName(), player.getLocation(), blockName, 
 						item.getAmount(), name);
@@ -381,12 +381,14 @@ public class BlockBreakListener implements Listener {
 				newDrops.add(toDrop);
 				doActualDrops(newDrops, sourceLocation, player, dropName, blockName, blockConfig, alertBuffer);
 			} else {
-				String name = xform.hasItemMeta() && xform.getItemMeta().hasDisplayName() ? 
-						xform.getItemMeta().getDisplayName() : Config.getPrettyName(xform.getType().name());
-						
-				log("STAT: Player {0} at {1} broke {2} - replacing with {3} {4} as {6}", 
-						player.getDisplayName(), player.getLocation(), blockName, 
-						placed, name, expressed);
+//				String name = xform.hasItemMeta() && xform.getItemMeta().hasDisplayName() ?
+//						xform.getItemMeta().getDisplayName() : Config.getPrettyName(xform.getType().name());
+
+				String name = xform.getI18NDisplayName();
+
+//				log("STAT: Player {0} at {1} broke {2} - replacing with {3} {4} as {6}",
+//						player.getDisplayName(), player.getLocation(), blockName,
+//						placed, name, expressed);
 				
 				// Anything to tell anyone about?
 				if (placed > 0 && Config.isAlertUser()) {
@@ -411,8 +413,7 @@ public class BlockBreakListener implements Listener {
 	private void buildAlert(StringBuilder alertBuilder, ItemStack item, String nameOverride, int amount, String postfix) {
 		String name = nameOverride;
 		if (name == null && item != null) {
-			name = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? 
-					item.getItemMeta().getDisplayName() : Config.getPrettyName(item.getType().name());
+			name = item.getI18NDisplayName();
 		}
 		
 		alertBuilder.append(" ").append(amount).append(" ").append(name);
@@ -432,7 +433,7 @@ public class BlockBreakListener implements Listener {
 	}
 
 	private void log(String message, Object...replace) {
-		plugin.getLogger().log(Level.INFO, message, replace);
+		// plugin.getLogger().log(Level.INFO, message, replace);
 	}
 
 	private void debug(String message, Object...replace) {
@@ -446,13 +447,9 @@ public class BlockBreakListener implements Listener {
 			try {
 				String fCommand = command.replaceAll("%player%", player.getName()).replaceAll("%uuid%", player.getUniqueId().toString());
 				
-				if (Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), fCommand)) {
-					log("Fired off {0} for {1}.", fCommand, player.getName());
-				} else {
-					log("Failed to fire off {0} for {1}.", fCommand, player.getName());
-				}
+				Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), fCommand);
 			} catch (Exception e) {
-				log("Failure during command processing: {0}", e);
+				HiddenOre.getPlugin().getLogger().log(Level.SEVERE, "Failure during command processing: {0}", e);
 			}
 		}
 	}
