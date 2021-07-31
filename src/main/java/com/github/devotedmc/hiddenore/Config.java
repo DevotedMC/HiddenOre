@@ -1,16 +1,24 @@
 package com.github.devotedmc.hiddenore;
 
+import com.github.devotedmc.hiddenore.listeners.ConfigDeferralListener;
+import com.sk89q.worldedit.bukkit.BukkitAdapter;
+import com.sk89q.worldguard.WorldGuard;
+import com.sk89q.worldguard.protection.regions.ProtectedRegion;
+import com.sk89q.worldguard.protection.regions.RegionContainer;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Spliterators;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
-
+import java.util.stream.StreamSupport;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.data.BlockData;
@@ -18,21 +26,18 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.inventory.ItemStack;
 
-import com.github.devotedmc.hiddenore.listeners.ConfigDeferralListener;
-import org.jetbrains.annotations.Nullable;
-
 /**
  * Someday it might be nice to refactor this to be a proper object.
- * 
+ * <p>
  * For now, this holds the configs for HiddenOre, in an instance-backed semi-private collective.
- * 
- * @author soexpso, programmerdan
  *
+ * @author soexpso, programmerdan
  */
 public final class Config {
 
 	public static Config instance;
 	public static boolean isDebug;
+	public static RegionNameSupplier regionNameSupplier;
 
 	public String defaultPrefix;
 	public boolean alertUser;
@@ -40,6 +45,7 @@ public final class Config {
 	public boolean ignoreSilktouch;
 	public Map<String, DropConfig> dropConfigs;
 	public Map<UUID, Map<NamespacedKey, List<BlockConfig>>> blockConfigs;
+	public Map<String, Map<NamespacedKey, List<BlockConfig>>> regionConfigs;
 	public Map<String, Map<NamespacedKey, List<BlockConfig>>> preloadBlockConfigs;
 	public Map<String, NameConfig> prettyNames;
 	public Map<String, PlayerStateConfig> stateMasterList;
@@ -49,19 +55,20 @@ public final class Config {
 	private static String trackFileName;
 	private static File trackFile;
 	public static long trackSave;
-	
+
 	private static boolean useMapSave;
 	private static String mapFileName;
 	private static File mapFile;
 	public static long mapSave;
-	
+
 	public int transformAttemptMultiplier = 3;
-	
+
 	public static boolean caveOres = false;
 
 	private Config() {
 		dropConfigs = new HashMap<String, DropConfig>();
 		blockConfigs = new HashMap<UUID, Map<NamespacedKey, List<BlockConfig>>>();
+		regionConfigs = new HashMap<>();
 		preloadBlockConfigs = new HashMap<String, Map<NamespacedKey, List<BlockConfig>>>();
 		prettyNames = new HashMap<String, NameConfig>();
 		stateMasterList = new HashMap<String, PlayerStateConfig>();
@@ -83,7 +90,8 @@ public final class Config {
 			file = HiddenOre.getPlugin().getConfig();
 			doLoad();
 		} catch (Exception e) {
-			HiddenOre.getPlugin().getLogger().log(Level.WARNING, "An error occured while loading config!", e);
+			HiddenOre.getPlugin().getLogger()
+					.log(Level.WARNING, "An error occured while loading config!", e);
 		}
 	}
 
@@ -96,18 +104,21 @@ public final class Config {
 		trackFileName = file.getString("track_file", trackFileName);
 		trackFile = new File(HiddenOre.getPlugin().getDataFolder(), trackFileName);
 		trackSave = file.getLong("track_save_ticks", trackSave);
-		
+
 		useMapSave = file.getBoolean("map_save_active", useMapSave);
 		mapFileName = file.getString("map_file", mapFileName);
 		mapFile = new File(HiddenOre.getPlugin().getDataFolder(), mapFileName);
 		mapSave = file.getLong("map_save_ticks", mapSave);
+
+		regionNameSupplier = initRegionNameSupplier();
 
 		i.ignoreSilktouch = file.getBoolean("ignore_silktouch", i.ignoreSilktouch);
 
 		i.alertUser = file.getBoolean("alert_user", i.alertUser);
 		i.listDrops = file.getBoolean("list_drops", i.listDrops);
 		i.defaultPrefix = file.getString("prefix", i.defaultPrefix);
-		i.transformAttemptMultiplier = file.getInt("transform_attempt_multiplier", i.transformAttemptMultiplier);
+		i.transformAttemptMultiplier = file.getInt("transform_attempt_multiplier",
+				i.transformAttemptMultiplier);
 
 		ConfigurationSection prettyNames = file.getConfigurationSection("pretty_names");
 		if (prettyNames != null) {
@@ -135,7 +146,7 @@ public final class Config {
 		} else {
 			// HiddenOre.getPlugin().getLogger().info("No Pretty Names specified.");
 		}
-		
+
 		ConfigurationSection tools = file.getConfigurationSection("tools");
 		if (tools != null) {
 			for (String key : tools.getKeys(false)) {
@@ -147,7 +158,7 @@ public final class Config {
 		} else {
 			// HiddenOre.getPlugin().getLogger().info("No tool configurations specified. This might cause issues.");
 		}
-		
+
 		ConfigurationSection states = file.getConfigurationSection("states");
 		if (states != null) {
 			for (String state : states.getKeys(false)) {
@@ -157,10 +168,10 @@ public final class Config {
 					if (stateConfig.contains("haste")) {
 						pstateConfig.hasteRates = stateConfig.getDoubleList("haste");
 					}
-					if (stateConfig.contains("fatigue" )) {
+					if (stateConfig.contains("fatigue")) {
 						pstateConfig.fatigueRates = stateConfig.getDoubleList("fatigue");
 					}
-					if (stateConfig.contains("nausea")) { 
+					if (stateConfig.contains("nausea")) {
 						pstateConfig.nauseaRates = stateConfig.getDoubleList("nausea");
 					}
 					if (stateConfig.contains("luck")) {
@@ -175,14 +186,19 @@ public final class Config {
 					if (stateConfig.contains("permissions")) {
 						List<Map<?, ?>> rawPermListMap = stateConfig.getMapList("permissions");
 						if (rawPermListMap.isEmpty()) {
-							HiddenOre.getPlugin().getLogger().log(Level.WARNING, "Permissions section in ''{0}'' is either empty or not a list-of-maps", state);
+							HiddenOre.getPlugin().getLogger().log(Level.WARNING,
+									"Permissions section in ''{0}'' is either empty or not a list-of-maps",
+									state);
 						} else {
 							TreeMap<String, Double> map = new TreeMap<>();
 							for (Map permMap : rawPermListMap) {
 								Object permName = permMap.get("permission");
 								Object modAmount = permMap.get("modifier");
-								if (!(permName instanceof String) || !(modAmount instanceof Double)) {
-									HiddenOre.getPlugin().getLogger().log(Level.WARNING, "Listed permission in state ''{0}'' requires a String permission and a Float modifier", state);
+								if (!(permName instanceof String)
+										|| !(modAmount instanceof Double)) {
+									HiddenOre.getPlugin().getLogger().log(Level.WARNING,
+											"Listed permission in state ''{0}'' requires a String permission and a Float modifier",
+											state);
 									continue;
 								}
 								map.put((String) permName, (Double) modAmount);
@@ -194,9 +210,20 @@ public final class Config {
 								String k = ent.getKey();
 								Double v = ent.getValue();
 								return new Map.Entry<String, Double>() {
-									@Override public String getKey() { return k; }
-									@Override public Double getValue() { return v; }
-									@Override public Double setValue(Double x) { return v; }
+									@Override
+									public String getKey() {
+										return k;
+									}
+
+									@Override
+									public Double getValue() {
+										return v;
+									}
+
+									@Override
+									public Double setValue(Double x) {
+										return v;
+									}
 								};
 							}).collect(Collectors.toList());
 						}
@@ -206,7 +233,7 @@ public final class Config {
 				}
 			}
 		}
-		
+
 		ConfigurationSection drops = file.getConfigurationSection("drops");
 		if (drops != null) {
 			for (String drop : drops.getKeys(false)) {
@@ -218,11 +245,11 @@ public final class Config {
 
 		ConfigurationSection blocks = file.getConfigurationSection("blocks");
 		if (blocks != null) { // default or legacy
-			Map<NamespacedKey, List<BlockConfig>> worldBlockConfigs =  new HashMap<NamespacedKey, List<BlockConfig>>();
+			Map<NamespacedKey, List<BlockConfig>> worldBlockConfigs = new HashMap<NamespacedKey, List<BlockConfig>>();
 			grabBlocks("default", worldBlockConfigs, blocks, i);
 			i.blockConfigs.put(null, worldBlockConfigs);
 		}
-		
+
 		ConfigurationSection worlds = file.getConfigurationSection("worlds");
 		if (worlds != null) { // has per-world blocks!
 			for (String world : worlds.getKeys(false)) {
@@ -230,14 +257,16 @@ public final class Config {
 				try {
 					worlduid = UUID.fromString(world);
 					if (HiddenOre.getPlugin().getServer().getWorld(worlduid) == null) {
-						HiddenOre.getPlugin().getLogger().warning("Although it seems to be a UUID, " + world + " no match found yet.");
+						HiddenOre.getPlugin().getLogger().warning(
+								"Although it seems to be a UUID, " + world
+										+ " no match found yet.");
 						worlduid = null;
 					}
 				} catch (Exception e) {
 					// System.out.println("World not defined by UUID");
 					worlduid = null;
 				}
-				
+
 				if (worlduid == null) {
 					try {
 						worlduid = HiddenOre.getPlugin().getServer().getWorld(world).getUID();
@@ -245,11 +274,12 @@ public final class Config {
 						// System.out.println("World not defined by Name; unable to match " + world + " with loaded world.");
 					}
 				}
-				
+
 				Map<NamespacedKey, List<BlockConfig>> worldBlockConfigs = null;
-				
+
 				if (worlduid == null) {
-					HiddenOre.getPlugin().getLogger().warning("Unable to match world " + world + " with loaded world, registering for post-load.");
+					HiddenOre.getPlugin().getLogger().warning("Unable to match world " + world
+							+ " with loaded world, registering for post-load.");
 					worldBlockConfigs = i.preloadBlockConfigs.get(world);
 				} else {
 					worldBlockConfigs = i.blockConfigs.get(worlduid);
@@ -261,7 +291,8 @@ public final class Config {
 
 				ConfigurationSection worldConfig = worlds.getConfigurationSection(world);
 				if (worldConfig != null) {
-					ConfigurationSection worldBlocks = worldConfig.getConfigurationSection("blocks");
+					ConfigurationSection worldBlocks = worldConfig.getConfigurationSection(
+							"blocks");
 					if (worldBlocks != null) {
 						grabBlocks(world, worldBlockConfigs, worldBlocks, i);
 					}
@@ -274,20 +305,42 @@ public final class Config {
 				}
 			}
 		}
-		
+
 		if (i.preloadBlockConfigs.size() > 0) {
 			// some world configs won't immediately resolve!
 			// register a listener for world init / loading to check if we can resolve them!
-			
+
 			HiddenOre.getPlugin().getServer().getPluginManager()
 					.registerEvents(new ConfigDeferralListener(), HiddenOre.getPlugin());
-			
+
 		}
-		
+
+		ConfigurationSection regions = file.getConfigurationSection("regions");
+		if (regions != null) { // has per-region blocks!
+			for (String region : regions.getKeys(false)) {
+
+				Map<NamespacedKey, List<BlockConfig>> regionBlocksConfig = i.regionConfigs.getOrDefault(
+						region, new HashMap<>());
+
+				ConfigurationSection regionConfig = regions.getConfigurationSection(region);
+				if (regionConfig != null) {
+					ConfigurationSection regionBlocks = regionConfig.getConfigurationSection(
+							"blocks");
+					if (regionBlocks != null) {
+						grabBlocks(region, regionBlocksConfig, regionBlocks, i);
+					}
+				}
+
+				i.regionConfigs.put(region, regionBlocksConfig);
+			}
+		}
+
 		instance = i;
 	}
 
-	private static void grabBlocks(String world, Map<NamespacedKey, List<BlockConfig>> worldBlockConfigs, ConfigurationSection blocks, Config i) {
+	private static void grabBlocks(String world,
+			Map<NamespacedKey, List<BlockConfig>> worldBlockConfigs, ConfigurationSection blocks,
+			Config i) {
 		if (blocks != null) {
 			for (String sourceBlock : blocks.getKeys(false)) {
 				// HiddenOre.getPlugin().getLogger().info("Loading config for " + sourceBlock + " for world " + world);
@@ -298,15 +351,18 @@ public final class Config {
 				if (cBlockName == null) {
 					ConfigurationSection cBlockNames = block.getConfigurationSection("materials");
 					if (cBlockNames == null) {
-						HiddenOre.getPlugin().getLogger().warning("Failed to find material or materials for " + sourceBlock);
+						HiddenOre.getPlugin().getLogger()
+								.warning("Failed to find material or materials for " + sourceBlock);
 						continue;
 					} else {
 						for (String cBlockN : cBlockNames.getKeys(false)) {
-							ConfigurationSection cBlockS = cBlockNames.getConfigurationSection(cBlockN);
+							ConfigurationSection cBlockS = cBlockNames.getConfigurationSection(
+									cBlockN);
 							String cBlockName2 = cBlockS.getString("material");
 							Material cBlockMat = Material.getMaterial(cBlockName2);
 							if (cBlockMat == null) {
-								HiddenOre.getPlugin().getLogger().warning("Failed to find material for " + cBlockName2);
+								HiddenOre.getPlugin().getLogger()
+										.warning("Failed to find material for " + cBlockName2);
 								continue;
 							} else {
 								cBlockKeys.add(cBlockMat.getKey());
@@ -317,52 +373,59 @@ public final class Config {
 					try {
 						Material cBlockMat = Material.getMaterial(cBlockName);
 						if (cBlockMat == null) {
-							HiddenOre.getPlugin().getLogger().warning("Failed to find material for " + cBlockName);
+							HiddenOre.getPlugin().getLogger()
+									.warning("Failed to find material for " + cBlockName);
 							continue;
 						} else {
 							cBlockKeys.add(cBlockMat.getKey());
 						}
 					} catch (Exception e) {
-						HiddenOre.getPlugin().getLogger().warning("Failed to find material for " + cBlockName);
+						HiddenOre.getPlugin().getLogger()
+								.warning("Failed to find material for " + cBlockName);
 						continue;
 					}
 				}
-				
+
 				if (cBlockKeys.isEmpty()) {
-					HiddenOre.getPlugin().getLogger().warning("No material(s) set for " + sourceBlock);
+					HiddenOre.getPlugin().getLogger()
+							.warning("No material(s) set for " + sourceBlock);
 					continue;
 				}
-				
+
 				String cPrefix = block.getString("prefix", null);
 				Boolean cMultiple = block.getBoolean("dropMultiple", false);
 				Boolean cSuppress = block.getBoolean("suppressDrops", false);
-				
+
 				// add what blocks should be transformed, if transformation is used.
-				ConfigurationSection validTransforms = block.getConfigurationSection("validTransforms");
+				ConfigurationSection validTransforms = block.getConfigurationSection(
+						"validTransforms");
 				List<NamespacedKey> transformThese = new ArrayList<NamespacedKey>();
 				if (validTransforms != null) {
 					for (String transformL : validTransforms.getKeys(false)) {
-						ConfigurationSection transform = validTransforms.getConfigurationSection(transformL);
+						ConfigurationSection transform = validTransforms.getConfigurationSection(
+								transformL);
 						String tBlockName = transform.getString("material");
 						try {
 							Material tBlockMat = Material.getMaterial(tBlockName);
-							NamespacedKey tBlockKey = tBlockMat == null ? null : tBlockMat.getKey(); 
+							NamespacedKey tBlockKey = tBlockMat == null ? null : tBlockMat.getKey();
 							if (tBlockKey != null) {
 								transformThese.add(tBlockKey);
 							}
 						} catch (Exception e) {
-							HiddenOre.getPlugin().getLogger().warning("Failed to find valid transform material for " + tBlockName);
+							HiddenOre.getPlugin().getLogger().warning(
+									"Failed to find valid transform material for " + tBlockName);
 							continue;
 						}
 					}
 				} else {
 					validTransforms = null;
 				}
-				
+
 				// we can set up multiple per def, here we handle it.
 				for (NamespacedKey cBlockKey : cBlockKeys) {
-					BlockConfig bc = new BlockConfig(cBlockKey, cMultiple, cSuppress, cPrefix, new ArrayList<NamespacedKey>(transformThese));
-	
+					BlockConfig bc = new BlockConfig(cBlockKey, cMultiple, cSuppress, cPrefix,
+							new ArrayList<NamespacedKey>(transformThese));
+
 					// now add drops.
 					ConfigurationSection drops = block.getConfigurationSection("drops");
 					if (drops != null) {
@@ -370,7 +433,7 @@ public final class Config {
 							bc.addDropConfig(sourceDrop, grabDropConfig(drops, sourceDrop));
 						}
 					}
-					
+
 					// mix and match in-house drops and "from list" shared drops.
 					List<String> dropList = block.getStringList("dropList");
 					if (dropList != null) {
@@ -380,13 +443,13 @@ public final class Config {
 							}
 						}
 					}
-					
+
 					List<BlockConfig> bclist = worldBlockConfigs.get(cBlockKey);
 					if (bclist == null) {
 						bclist = new LinkedList<BlockConfig>();
 					}
 					bclist.add(bc);
-	
+
 					worldBlockConfigs.put(cBlockKey, bclist);
 				}
 			}
@@ -395,18 +458,19 @@ public final class Config {
 		}
 
 	}
-	
+
 	private static DropConfig grabDropConfig(ConfigurationSection drops, String sourceDrop) {
 		// HiddenOre.getPlugin().getLogger().info("Loading config for drop " + sourceDrop);
 		ConfigurationSection drop = drops.getConfigurationSection(sourceDrop);
 		String dPrefix = drop.getString("prefix", null);
 		@SuppressWarnings("unchecked")
-		List<ItemStack> items = (List<ItemStack>) drop.getList("package", new ArrayList<ItemStack>());
+		List<ItemStack> items = (List<ItemStack>) drop.getList("package",
+				new ArrayList<ItemStack>());
 		boolean transformIfAble = drop.getBoolean("transformIfAble", false);
 		boolean transformDropIfFails = drop.getBoolean("transformDropIfFails", false);
 		int transformMaxDropsIfFails = drop.getInt("transformMaxDropsIfFails", 1);
 		String command = drop.getString("command", null);
-		
+
 		VeinConfig veinNature = null;
 		ConfigurationSection veinNatureConfig = drop.getConfigurationSection("veinNature");
 		if (veinNatureConfig != null) {
@@ -420,8 +484,9 @@ public final class Config {
 			double heightLength = veinNatureConfig.getDouble("heightLength", 1.0);
 			double densityLength = veinNatureConfig.getDouble("densityLength", 1.0);
 			boolean forceVisible = veinNatureConfig.getBoolean("forceVisibleTransform", false);
-			
-			veinNature = new VeinConfig(densitySeed, heightSeed, density, maxSpan, densityBonus, areaHeight, areaSpan,
+
+			veinNature = new VeinConfig(densitySeed, heightSeed, density, maxSpan, densityBonus,
+					areaHeight, areaSpan,
 					heightLength, densityLength, forceVisible);
 		}
 
@@ -433,14 +498,15 @@ public final class Config {
 		if (biomes != null) {
 			for (String sourceBiome : biomes.getKeys(false)) {
 				// HiddenOre.getPlugin().getLogger().info("Loading config for biome " + sourceBiome);
-				DropLimitsConfig dlc = grabLimits(biomes.getConfigurationSection(sourceBiome), dc.limits);
+				DropLimitsConfig dlc = grabLimits(biomes.getConfigurationSection(sourceBiome),
+						dc.limits);
 				dc.addBiomeLimits(sourceBiome, dlc);
 			}
 		}
 
 		return dc;
 	}
-	
+
 	private static DropLimitsConfig grabLimits(ConfigurationSection drop, DropLimitsConfig parent) {
 		DropLimitsConfig dlc = new DropLimitsConfig();
 		dlc.setTools(drop.isSet("tools") ? drop.getStringList("tools") : parent.tools);
@@ -455,7 +521,7 @@ public final class Config {
 		}
 		dlc.minY = drop.getInt("minY", parent.minY);
 		dlc.maxY = drop.getInt("maxY", parent.maxY);
-		
+
 		// Get xp data as well.
 		ConfigurationSection xp = drop.getConfigurationSection("xp");
 		if (xp != null) {
@@ -466,12 +532,14 @@ public final class Config {
 				xpc.minAmount = xpamount;
 				xpc.maxAmount = xpamount;
 			} else {
-				xpc.minAmount = xp.getDouble("minAmount", parent.xp != null ? parent.xp.minAmount : 0.0d);
-				xpc.maxAmount = xp.getDouble("maxAmount", parent.xp != null ? parent.xp.maxAmount : 0.0d);
+				xpc.minAmount = xp.getDouble("minAmount",
+						parent.xp != null ? parent.xp.minAmount : 0.0d);
+				xpc.maxAmount = xp.getDouble("maxAmount",
+						parent.xp != null ? parent.xp.maxAmount : 0.0d);
 			}
 			dlc.xp = xpc;
 		}
-		
+
 		String state = drop.isSet("state") ? drop.getString("state", parent.state) : parent.state;
 		dlc.state = state;
 
@@ -485,8 +553,13 @@ public final class Config {
 		return dlc;
 	}
 
-	public static BlockConfig isDropBlock(UUID world, BlockData block) {
-		List<BlockConfig> bcs = instance.blockConfigs.getOrDefault(world, instance.blockConfigs.get(null)).get(block.getMaterial().getKey());
+	public static BlockConfig isDropBlock(UUID world, BlockData block, Location blockLocation) {
+		List<BlockConfig> bcs = regionNameSupplier.getRegionsForLocation(blockLocation).stream()
+				.filter(instance.regionConfigs::containsKey).findFirst()
+				.map(instance.regionConfigs::get)
+				.orElseGet(() ->
+						instance.blockConfigs.getOrDefault(world,
+								instance.blockConfigs.get(null))).get(block.getMaterial().getKey());
 		if (bcs != null && bcs.size() > 0) {
 			// return first match
 			return bcs.get(0);
@@ -495,12 +568,6 @@ public final class Config {
 			}*/ // TODO 1.13: can we layer in some new distinguishers that could lead to multi-anchoring by Material?
 		}
 		return null;
-	}
-
-	public static String getPrefix(UUID world, BlockData block, String drop) {
-		BlockConfig bc = isDropBlock(world, block);
-		String pref = (bc == null) ? instance.defaultPrefix : bc.getPrefix(drop);
-		return (pref == null ? instance.defaultPrefix : pref);
 	}
 
 	public static String getPrefix() {
@@ -524,28 +591,47 @@ public final class Config {
 	public static File getTrackFile() {
 		return trackFile;
 	}
-	
+
 	public static boolean isMapActive() {
 		return useMapSave;
 	}
-	
+
 	public static File getMapFile() {
 		return mapFile;
 	}
-	
+
 	public static int getTransformAttemptMultiplier() {
 		return instance.transformAttemptMultiplier;
 	}
-	
+
 	public ConfigurationSection getWorldGenerations() {
 		return file.getConfigurationSection("clear_ores");
 	}
+
 	public static int getWorldHeight(String world) {
-		ConfigurationSection worldConfig = instance.file.getConfigurationSection("worlds").getConfigurationSection(world);
+		ConfigurationSection worldConfig = instance.file.getConfigurationSection("worlds")
+				.getConfigurationSection(world);
 		return worldConfig.getInt("maxHeight") + Math.abs(worldConfig.getInt("minHeight"));
 	}
 
 	public static PlayerStateConfig getState(String state) {
 		return instance.stateMasterList.get(state);
+	}
+
+	private static RegionNameSupplier initRegionNameSupplier() {
+		try {
+			RegionContainer regionContainer = WorldGuard.getInstance().getPlatform()
+					.getRegionContainer();
+
+			return loc -> StreamSupport.stream(
+					Optional.ofNullable(regionContainer.get(BukkitAdapter.adapt(loc.getWorld())))
+							.map(manager ->
+									manager.getApplicableRegions(BukkitAdapter.asBlockVector(loc))
+											.spliterator()).orElse(
+									Spliterators.emptySpliterator()),
+					false).map(ProtectedRegion::getId).collect(Collectors.toList());
+		} catch (NoClassDefFoundError e) {
+			return RegionNameSupplier.NOOP_REGION_ITERATOR;
+		}
 	}
 }

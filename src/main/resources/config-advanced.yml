@@ -117,3 +117,35 @@ worlds:
       minAmount: 4
       maxAmount: 6
       transformIfAble: true
+regions:
+  test:
+    blocks:
+      stone:
+        material: STONE
+        validTransforms:
+          cobblestone:
+            material: COBBLESTONE
+          dirt:
+            material: DIRT
+        dropMultiple: false
+        drops:
+          coal_ore:
+            package:
+              - ==: org.bukkit.inventory.ItemStack
+                v: 1
+                type: COAL_ORE
+                amount: 1
+            tools:
+              - wood_pickaxe
+              - stone_pickaxe
+              - iron_pickaxe
+              - gold_pickaxe
+              - diamond_pickaxe
+            minY: 1
+            maxY: 131
+            chance: 0.1
+            minAmount: 2
+            maxAmount: 8
+            transformIfAble: true
+            transformDropIfFails: true
+            transformMaxDropsIfFails: 4

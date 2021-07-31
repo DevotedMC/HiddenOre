@@ -1,10 +1,12 @@
 package com.github.devotedmc.hiddenore.listeners;
 
+import com.github.devotedmc.hiddenore.BlockConfig;
+import com.github.devotedmc.hiddenore.Config;
+import com.github.devotedmc.hiddenore.HiddenOre;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
-
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -16,10 +18,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.ChunkPopulateEvent;
 import org.bukkit.inventory.ItemStack;
-
-import com.github.devotedmc.hiddenore.BlockConfig;
-import com.github.devotedmc.hiddenore.Config;
-import com.github.devotedmc.hiddenore.HiddenOre;
 
 /**
  * Populator to strip out blocks selectively from a world during generation. 
@@ -175,7 +173,7 @@ public class WorldGenerationListener implements Listener {
 			for(int z = 0; z < 16; z++) {
 				for(int y = 0; y < xzmax; y++) {
 					Block block = chunk.getBlock(x, y, z);
-					BlockConfig bc = Config.isDropBlock(world, block.getBlockData());
+					BlockConfig bc = Config.isDropBlock(world, block.getBlockData(), block.getLocation());
 					if(bc == null) continue;
 					for(BlockFace face : faces) {
 						if(block.getRelative(face).getType() == Material.AIR) {
