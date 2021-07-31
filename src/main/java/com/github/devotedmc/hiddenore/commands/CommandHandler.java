@@ -1,9 +1,13 @@
 package com.github.devotedmc.hiddenore.commands;
 
+import com.github.devotedmc.hiddenore.BlockConfig;
+import com.github.devotedmc.hiddenore.Config;
+import com.github.devotedmc.hiddenore.DropConfig;
+import com.github.devotedmc.hiddenore.DropItemConfig;
+import com.github.devotedmc.hiddenore.HiddenOre;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
@@ -11,12 +15,6 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
-
-import com.github.devotedmc.hiddenore.BlockConfig;
-import com.github.devotedmc.hiddenore.Config;
-import com.github.devotedmc.hiddenore.DropConfig;
-import com.github.devotedmc.hiddenore.DropItemConfig;
-import com.github.devotedmc.hiddenore.HiddenOre;
 
 /**
  * Management and maintenance commands
@@ -93,7 +91,7 @@ public class CommandHandler implements CommandExecutor {
 						return true;
 					}
 				} else {
-					Bukkit.getPluginManager().disablePlugin(plugin);
+					Bukkit.getPluginManager().disablePlugin(plugin, false);
 					Bukkit.getPluginManager().enablePlugin(plugin);
 					sender.sendMessage("HiddenOre reloaded");
 					return true;
